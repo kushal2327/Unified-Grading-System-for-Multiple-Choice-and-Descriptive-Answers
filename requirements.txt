@@ -1,0 +1,17 @@
+django
+djangorestframework
+djangorestframework-simplejwt
+psycopg2-binary
+pillow
+opencv-python
+pytesseract
+sentence-transformers
+chromadb
+langchain
+langchain-community
+langchain-text-splitters
+pymupdf
+openai
+requests
+python-dotenv
+django-cors-headers

@@ -1,0 +1,147 @@
+/* ============================================================
+   Design tokens
+   Theme: "marked exam paper" - warm paper background, ink-blue
+   accents, red-pen highlight for flags/feedback annotations.
+   ============================================================ */
+:root {
+  --paper: #f7f3ea;
+  --paper-line: #ded4bd;
+  --ink: #1f2b3a;
+  --ink-soft: #4b5768;
+  --ink-blue: #2b4570;
+  --ink-blue-deep: #1a2d4d;
+  --accent-red: #a8342a;
+  --accent-red-soft: #f3e2df;
+  --accent-green: #3c6e47;
+  --accent-green-soft: #e3ede4;
+  --accent-amber: #a3721a;
+  --accent-amber-soft: #f4e9d4;
+
+  --font-display: 'Source Serif Pro', Georgia, 'Times New Roman', serif;
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+  --radius: 3px;
+  --shadow-card: 0 1px 3px rgba(31, 43, 58, 0.08), 0 1px 2px rgba(31, 43, 58, 0.06);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  background-image: linear-gradient(var(--paper-line) 1px, transparent 1px);
+  background-size: 100% 2.1em;
+  background-position: 0 5.2em;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  color: var(--ink-blue-deep);
+  margin: 0 0 0.5em 0;
+  font-weight: 600;
+}
+
+h1 { font-size: 1.9rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.35rem; }
+h3 { font-size: 1.05rem; }
+
+a { color: var(--ink-blue); }
+
+button { font-family: inherit; cursor: pointer; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.55em 1.1em;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.12s ease;
+}
+
+.btn-primary { background: var(--ink-blue); color: #fff; }
+.btn-primary:hover { background: var(--ink-blue-deep); }
+.btn-primary:disabled { background: #9aa5b3; cursor: not-allowed; }
+
+.btn-outline { background: transparent; border-color: var(--ink-blue); color: var(--ink-blue); }
+.btn-outline:hover { background: rgba(43, 69, 112, 0.06); }
+
+.btn-danger { background: var(--accent-red); color: #fff; }
+.btn-danger:hover { opacity: 0.9; }
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: 0.92rem;
+  padding: 0.55em 0.7em;
+  border: 1px solid #c9bfa4;
+  border-radius: var(--radius);
+  background: #fffdf8;
+  color: var(--ink);
+  width: 100%;
+}
+input:focus, textarea:focus, select:focus {
+  outline: 2px solid var(--ink-blue);
+  outline-offset: 1px;
+}
+
+label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 0.3em;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.field { margin-bottom: 1rem; }
+
+.card {
+  background: #fffdf8;
+  border: 1px solid var(--paper-line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 1.4rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.2em 0.65em;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.badge-pending { background: var(--accent-amber-soft); color: var(--accent-amber); }
+.badge-graded { background: var(--accent-green-soft); color: var(--accent-green); }
+.badge-flagged { background: var(--accent-red-soft); color: var(--accent-red); }
+
+table { width: 100%; border-collapse: collapse; }
+th, td {
+  text-align: left;
+  padding: 0.6em 0.8em;
+  border-bottom: 1px solid var(--paper-line);
+  font-size: 0.88rem;
+}
+th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+
+.container { max-width: 1080px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+.error-text { color: var(--accent-red); font-size: 0.85rem; margin-top: 0.4em; }
+.muted { color: var(--ink-soft); }
