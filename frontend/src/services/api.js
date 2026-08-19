@@ -83,6 +83,7 @@ export const teacherAPI = {
   createExam: (payload) => api.post("/teacher/create-exam", payload),
   listExams: () => api.get("/teacher/exams"),
   examResults: (examId) => api.get(`/teacher/results/${examId}`),
+  examSubmissions: (examId) => api.get(`/teacher/submissions/${examId}`),
   reviewQueue: () => api.get("/teacher/review-queue"),
   materialChunks: (materialId) => api.get(`/teacher/materials/${materialId}/chunks`),
 };
@@ -95,6 +96,7 @@ export const studentAPI = {
     }),
   examResults: (examId) => api.get(`/student/results/${examId}`),
   examQuestions: (examId) => api.get(`/student/exams/${examId}`),
+  examLookupByCode: (code) => api.get("/student/exams/lookup", { params: { code } }),
 };
 
 // ---- Admin ----

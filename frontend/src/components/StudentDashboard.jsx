@@ -3,7 +3,7 @@ import { studentAPI } from "../services/api";
 import ResultViewer from "./ResultViewer";
 
 function QuestionBrowser({ onPick }) {
-  const [examId, setExamId] = useState("");
+  const [code, setCode] = useState("");
   const [exam, setExam] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -14,10 +14,10 @@ function QuestionBrowser({ onPick }) {
     setExam(null);
     setLoading(true);
     try {
-      const { data } = await studentAPI.examQuestions(examId);
+      const { data } = await studentAPI.examLookupByCode(code);
       setExam(data);
     } catch (err) {
-      setError(err.response?.data?.detail || "Exam not found. Check the ID with your teacher.");
+      setError(err.response?.data?.detail || "Could not find that exam.");
     } finally {
       setLoading(false);
     }
@@ -25,15 +25,19 @@ function QuestionBrowser({ onPick }) {
 
   return (
     <div className="card">
-      <h3>Find questions for an exam</h3>
+      <h3>Find an exam</h3>
       <p className="muted" style={{ marginTop: 0 }}>
-        Enter the Exam ID your teacher gave you to see its questions.
+        Enter the 4-digit exam code your teacher gave you.
       </p>
       <form onSubmit={handleLookup} style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end" }}>
         <div className="field" style={{ flex: 1, marginBottom: 0 }}>
-          <label htmlFor="browse_exam_id">Exam ID</label>
-          <input id="browse_exam_id" type="number" required value={examId}
-            onChange={(e) => setExamId(e.target.value)} />
+          <label htmlFor="exam_code">Exam code</label>
+          <input
+            id="exam_code" required maxLength={4} inputMode="numeric" pattern="\d{4}"
+            placeholder="e.g. 4821"
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+          />
         </div>
         <button className="btn btn-outline" type="submit" disabled={loading}>
           {loading ? "Looking up..." : "Find questions"}
@@ -44,7 +48,12 @@ function QuestionBrowser({ onPick }) {
 
       {exam && (
         <div style={{ marginTop: "1rem" }}>
-          <h3 style={{ marginBottom: "0.4rem" }}>{exam.title} <span className="muted" style={{ fontWeight: 400, fontSize: "0.8rem" }}>({exam.subject})</span></h3>
+          <h3 style={{ marginBottom: "0.4rem" }}>
+            {exam.title} <span className="muted" style={{ fontWeight: 400, fontSize: "0.8rem" }}>({exam.subject})</span>
+          </h3>
+          <p className="muted" style={{ fontSize: "0.8rem", marginTop: 0 }}>
+            Valid until {new Date(exam.valid_until).toLocaleDateString()}
+          </p>
           {exam.questions.length === 0 && <p className="muted">No questions on this exam yet.</p>}
           <table>
             <thead>
@@ -57,8 +66,7 @@ function QuestionBrowser({ onPick }) {
                   <td>{q.question_text}</td>
                   <td>{q.total_marks}</td>
                   <td>
-                    <button className="btn btn-outline" type="button"
-                      onClick={() => onPick(exam.id, q.id)}>
+                    <button className="btn btn-outline" type="button" onClick={() => onPick(exam.id, q.id)}>
                       Answer this
                     </button>
                   </td>

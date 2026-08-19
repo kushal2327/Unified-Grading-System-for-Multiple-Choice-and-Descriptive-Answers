@@ -17,11 +17,37 @@ from .serializers import (
     SubmitAnswerSerializer,
     SubmissionSerializer,
     DescriptiveResultSerializer,
+    SubmissionStudentSerializer,
 )
+import re
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
+class ExamLookupByCodeView(APIView):
+    """
+    GET /api/student/exams/lookup?code=1234
+    Look up an exam by its 4-digit teacher-set access code.
+    """
+    permission_classes = [permissions.IsAuthenticated]
 
+    def get(self, request):
+        code = request.query_params.get("code", "").strip()
+        if not re.fullmatch(r"\d{4}", code):
+            return Response({"detail": "Enter a valid 4-digit exam code."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            exam = Exam.objects.get(access_code=code)
+        except Exam.DoesNotExist:
+            return Response({"detail": "No exam found with that code."}, status=status.HTTP_404_NOT_FOUND)
+
+        if timezone.now() > exam.valid_until:
+            return Response(
+                {"detail": f"This exam expired on {exam.valid_until.strftime('%Y-%m-%d %H:%M')} and is no longer accepting submissions."},
+                status=status.HTTP_410_GONE,
+            )
+
+        return Response(ExamSerializer(exam).data)
 class TeacherMaterialUploadView(APIView):
     """
     POST /api/teacher/upload-material
@@ -166,6 +192,19 @@ class TeacherExamResultsView(generics.ListAPIView):
             question__exam_id=exam_id,
             question__exam__teacher=self.request.user,
         ).select_related("submission", "question")
+
+
+class TeacherExamSubmissionsView(generics.ListAPIView):
+    """GET /api/teacher/submissions/{exam_id} -> per-student submissions with results"""
+    permission_classes = [permissions.IsAuthenticated, IsTeacher]
+    serializer_class = SubmissionStudentSerializer
+
+    def get_queryset(self):
+        exam_id = self.kwargs["exam_id"]
+        return Submission.objects.filter(
+            exam_id=exam_id,
+            exam__teacher=self.request.user,
+        ).select_related("student").prefetch_related("results__question")
 
 class ExamQuestionsView(generics.RetrieveAPIView):
     """

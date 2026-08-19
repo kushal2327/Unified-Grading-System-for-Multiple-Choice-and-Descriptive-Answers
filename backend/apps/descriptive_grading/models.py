@@ -1,5 +1,10 @@
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
+from datetime import timedelta
+
+def default_valid_until():
+    return timezone.now() + timedelta(days=7)
 
 
 class Exam(models.Model):
@@ -11,6 +16,11 @@ class Exam(models.Model):
         related_name="exams",
         limit_choices_to={"role": "teacher"},
     )
+    access_code = models.CharField(
+        max_length=4, unique=True,
+        help_text="4-digit code students use to find and answer this exam",
+    )
+    valid_until = models.DateTimeField(default=default_valid_until)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -19,6 +29,9 @@ class Exam(models.Model):
     def __str__(self):
         return self.title
 
+    @property
+    def is_expired(self):
+        return timezone.now() > self.valid_until
 
 class Question(models.Model):
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="questions")

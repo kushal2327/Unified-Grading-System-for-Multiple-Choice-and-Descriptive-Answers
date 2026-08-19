@@ -10,7 +10,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "name", "email", "password", "role"]
+        fields = ["id", "name", "email", "password", "role", "roll_number"]
 
     def validate_role(self, value):
         if value not in ("student", "teacher", "admin"):
@@ -23,13 +23,14 @@ class RegisterSerializer(serializers.ModelSerializer):
             name=validated_data["name"],
             password=validated_data["password"],
             role=validated_data.get("role", "student"),
+            roll_number=validated_data.get("roll_number", ""),
         )
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "name", "email", "role", "created_at"]
+        fields = ["id", "name", "email", "role", "roll_number", "created_at"]
 
 
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):

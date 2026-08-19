@@ -4,7 +4,7 @@ import { authAPI } from "../services/api";
 
 export default function Register() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "student" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "student", roll_number: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -44,6 +44,12 @@ export default function Register() {
             <label htmlFor="email">Email</label>
             <input id="email" name="email" type="email" required value={form.email} onChange={handleChange} />
           </div>
+          {form.role === "student" && (
+            <div className="field">
+              <label htmlFor="roll_number">Roll Number</label>
+              <input id="roll_number" name="roll_number" required value={form.roll_number} onChange={handleChange} placeholder="e.g. CS2024001" />
+            </div>
+          )}
           <div className="field">
             <label htmlFor="password">Password</label>
             <input id="password" name="password" type="password" required minLength={8} value={form.password} onChange={handleChange} />

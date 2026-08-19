@@ -1,7 +1,8 @@
 from rest_framework import serializers
 
 from .models import TeacherMaterial, Exam, Question, Submission, DescriptiveResult
-
+import re
+from django.utils import timezone
 
 class TeacherMaterialSerializer(serializers.ModelSerializer):
     class Meta:
@@ -50,20 +51,34 @@ class ExamSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Exam
-        fields = ["id", "title", "subject", "teacher", "created_at", "questions"]
+        fields = ["id", "title", "subject", "teacher", "access_code", "valid_until", "created_at", "questions"]
         read_only_fields = ["id", "teacher", "created_at"]
+        extra_kwargs = {"valid_until": {"required": False}}
+
+    def validate_access_code(self, value):
+        if not re.fullmatch(r"\d{4}", value):
+            raise serializers.ValidationError("Access code must be exactly 4 digits (e.g. 4821).")
+        if Exam.objects.filter(access_code=value).exists():
+            raise serializers.ValidationError(
+                "This code is already used by another exam. Please choose a different 4-digit code."
+            )
+        return value
 
     def create(self, validated_data):
         questions_data = validated_data.pop("questions", [])
-        exam = Exam.objects.create(
-            title=validated_data["title"],
-            subject=validated_data["subject"],
-            teacher=self.context["request"].user,
-        )
+        exam_kwargs = {
+            "title": validated_data["title"],
+            "subject": validated_data["subject"],
+            "teacher": self.context["request"].user,
+            "access_code": validated_data["access_code"],
+        }
+        if validated_data.get("valid_until"):
+            exam_kwargs["valid_until"] = validated_data["valid_until"]
+
+        exam = Exam.objects.create(**exam_kwargs)
         for q in questions_data:
             Question.objects.create(exam=exam, **q)
         return exam
-
 
 class DescriptiveResultSerializer(serializers.ModelSerializer):
     class Meta:
@@ -90,6 +105,11 @@ class SubmitAnswerSerializer(serializers.Serializer):
         except Exam.DoesNotExist:
             raise serializers.ValidationError({"exam_id": "Exam not found."})
 
+        if timezone.now() > exam.valid_until:
+            raise serializers.ValidationError({
+                "exam_id": f"This exam expired on {exam.valid_until.strftime('%Y-%m-%d %H:%M')} and is no longer accepting submissions."
+            })
+
         try:
             question = Question.objects.get(id=attrs["question_id"], exam=exam)
         except Question.DoesNotExist:
@@ -107,3 +127,13 @@ class SubmissionSerializer(serializers.ModelSerializer):
         model = Submission
         fields = ["id", "student", "exam", "submitted_at", "status", "results"]
         read_only_fields = ["id", "student", "submitted_at", "status"]
+
+
+class SubmissionStudentSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source="student.name", read_only=True)
+    student_roll = serializers.CharField(source="student.roll_number", read_only=True)
+    results = DescriptiveResultSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Submission
+        fields = ["id", "student_name", "student_roll", "submitted_at", "status", "results"]

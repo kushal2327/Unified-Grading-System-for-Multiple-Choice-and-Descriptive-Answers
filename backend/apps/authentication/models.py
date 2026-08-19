@@ -36,6 +36,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
+    roll_number = models.CharField(max_length=50, blank=True, default="")
     # AbstractBaseUser's `password` field stores the hash; we alias the
     # db column so the physical schema matches the spec exactly.
     password = models.CharField(max_length=128, db_column="password_hash")

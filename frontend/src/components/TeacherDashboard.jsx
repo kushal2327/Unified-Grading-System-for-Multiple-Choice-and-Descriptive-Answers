@@ -43,7 +43,7 @@ function UploadMaterialCard() {
       <form onSubmit={handleSubmit}>
         <div className="field">
           <label htmlFor="subject">Subject</label>
-          <input id="subject" required value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. Biology" />
+          <input id="subject" required value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. Computer Science" />
         </div>
         <div className="field">
           <label htmlFor="file">File (.pdf or .txt)</label>
@@ -63,13 +63,22 @@ function UploadMaterialCard() {
   );
 }
 
+function defaultValidUntil() {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  return d.toISOString().split("T")[0];
+}
+
 function CreateExamCard({ onCreated }) {
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
+  const [accessCode, setAccessCode] = useState("");
+  const [validUntil, setValidUntil] = useState(defaultValidUntil());
   const [questions, setQuestions] = useState([
     { question_text: "", total_marks: 10, rubric: "" },
   ]);
   const [status, setStatus] = useState(null);
+  const [createdExam, setCreatedExam] = useState(null);
 
   const updateQuestion = (i, field, value) => {
     const next = [...questions];
@@ -82,23 +91,54 @@ function CreateExamCard({ onCreated }) {
 
   const removeQuestion = (i) => setQuestions(questions.filter((_, idx) => idx !== i));
 
-  const [createdExam, setCreatedExam] = useState(null);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus({ type: "loading" });
+    setCreatedExam(null);
     try {
       const { data } = await teacherAPI.createExam({
-        title, subject,
+        title,
+        subject,
+        access_code: accessCode,
+        valid_until: validUntil ? new Date(validUntil).toISOString() : undefined,
         questions: questions.map((q) => ({ ...q, total_marks: Number(q.total_marks) })),
       });
-      setStatus({ type: "success", message: "Exam created — see IDs below." });
+      setStatus({ type: "success", message: "Exam created — share the code below with your students." });
       setCreatedExam(data);
-      setTitle(""); setSubject("");
+      setTitle(""); setSubject(""); setAccessCode("");
+      setValidUntil(defaultValidUntil());
       setQuestions([{ question_text: "", total_marks: 10, rubric: "" }]);
       onCreated?.();
     } catch (err) {
-      setStatus({ type: "error", message: "Could not create exam. Check all fields are filled in." });
+      const detail = err.response?.data;
+      let message;
+      if (detail) {
+        if (typeof detail === "string") {
+          message = detail;
+        } else if (detail.detail) {
+          message = detail.detail;
+        } else {
+          const parts = [];
+          for (const [key, val] of Object.entries(detail)) {
+            if (key === "questions" && Array.isArray(val)) {
+              val.forEach((qErr, i) => {
+                if (qErr && typeof qErr === "object") {
+                  for (const [f, msgs] of Object.entries(qErr)) {
+                    parts.push(`Question ${i + 1} ${f}: ${Array.isArray(msgs) ? msgs.join(", ") : msgs}`);
+                  }
+                }
+              });
+            } else {
+              const msgs = Array.isArray(val) ? val : [val];
+              parts.push(`${key}: ${msgs.join(", ")}`);
+            }
+          }
+          message = parts.join(" | ") || "Could not create exam.";
+        }
+      } else {
+        message = "Could not create exam. Check all fields are filled in.";
+      }
+      setStatus({ type: "error", message });
     }
   };
 
@@ -108,19 +148,42 @@ function CreateExamCard({ onCreated }) {
       <form onSubmit={handleSubmit}>
         <div className="field">
           <label htmlFor="title">Title</label>
-          <input id="title" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Biology Midterm" />
+          <input id="title" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Data Structures Midterm" />
         </div>
         <div className="field">
           <label htmlFor="exam-subject">Subject</label>
-          <input id="exam-subject" required value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. Biology" />
+          <input id="exam-subject" required value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. Computer Science" />
         </div>
+
+        <div style={{ display: "flex", gap: "0.75rem" }}>
+          <div className="field" style={{ flex: 1 }}>
+            <label htmlFor="access-code">Exam code (4 digits)</label>
+            <input
+              id="access-code" required maxLength={4} inputMode="numeric" pattern="\d{4}"
+              placeholder="e.g. 4821"
+              value={accessCode}
+              onChange={(e) => setAccessCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            />
+          </div>
+          <div className="field" style={{ flex: 1 }}>
+            <label htmlFor="valid-until">Valid until</label>
+            <input
+              id="valid-until" type="date" required
+              value={validUntil}
+              onChange={(e) => setValidUntil(e.target.value)}
+            />
+          </div>
+        </div>
+        <p className="muted" style={{ marginTop: "-0.5rem", fontSize: "0.78rem" }}>
+          Students will use this 4-digit code to find the exam. Defaults to 1 week from today.
+        </p>
 
         <label>Questions</label>
         {questions.map((q, i) => (
           <div key={i} className="card" style={{ marginBottom: "0.75rem", background: "#fbf8f1" }}>
             <div className="field">
               <label>Question text</label>
-              <textarea rows={2} required value={q.question_text}
+              <textarea rows={8} required value={q.question_text}
                 onChange={(e) => updateQuestion(i, "question_text", e.target.value)} />
             </div>
             <div style={{ display: "flex", gap: "0.75rem" }}>
@@ -131,7 +194,7 @@ function CreateExamCard({ onCreated }) {
               </div>
               <div className="field" style={{ flex: 3 }}>
                 <label>Rubric</label>
-                <input required value={q.rubric} placeholder="e.g. 5 key points, 2 marks each, total 10"
+                <input required value={q.rubric} placeholder="e.g. Covers Big-O, trees, and graphs — 3 key areas, 5 marks each"
                   onChange={(e) => updateQuestion(i, "rubric", e.target.value)} />
               </div>
             </div>
@@ -152,14 +215,19 @@ function CreateExamCard({ onCreated }) {
           </button>
         </div>
       </form>
+
       {status?.message && (
         <p className={status.type === "error" ? "error-text" : "muted"} style={{ marginTop: "0.8rem" }}>
           {status.message}
         </p>
       )}
+
       {createdExam && (
         <div className="card" style={{ marginTop: "0.8rem", background: "#e3ede4" }}>
-          <p style={{ margin: 0 }}><strong>Exam ID: {createdExam.id}</strong></p>
+          <p style={{ margin: 0 }}>
+            <strong>Exam code: {createdExam.access_code}</strong>
+            {" · "}Valid until {new Date(createdExam.valid_until).toLocaleDateString()}
+          </p>
           <p style={{ margin: "0.4em 0 0" }}>Question IDs:</p>
           <ul style={{ margin: "0.2em 0 0" }}>
             {createdExam.questions.map((q) => (
@@ -167,7 +235,7 @@ function CreateExamCard({ onCreated }) {
             ))}
           </ul>
           <p className="muted" style={{ fontSize: "0.8rem", marginBottom: 0 }}>
-            Give students the Exam ID and the Question ID for whichever question they're answering.
+            Give students the exam code — they'll see this question list themselves.
           </p>
         </div>
       )}
@@ -175,7 +243,11 @@ function CreateExamCard({ onCreated }) {
   );
 }
 
-function ExamsAndResults({ exams, onSelectExam, selectedExamId, results }) {
+function ExamsAndResults({ exams, onSelectExam, selectedExamId, submissions }) {
+  const [expandedId, setExpandedId] = useState(null);
+
+  const toggle = (id) => setExpandedId(expandedId === id ? null : id);
+
   return (
     <div className="card">
       <h3>Your exams</h3>
@@ -203,30 +275,76 @@ function ExamsAndResults({ exams, onSelectExam, selectedExamId, results }) {
 
       {selectedExamId && (
         <div style={{ marginTop: "1.5rem" }}>
-          <h3>Results for exam #{selectedExamId}</h3>
-          {results.length === 0 && <p className="muted">No submissions graded yet.</p>}
-          {results.length > 0 && (
-            <table>
-              <thead>
-                <tr><th>Question</th><th>Marks</th><th>OCR conf.</th><th>Similarity</th><th>Status</th></tr>
-              </thead>
-              <tbody>
-                {results.map((r) => (
-                  <tr key={r.id}>
-                    <td>Q{r.question}</td>
-                    <td>{r.marks_awarded ?? "—"} / {r.total_marks}</td>
-                    <td>{r.ocr_confidence != null ? `${r.ocr_confidence.toFixed(1)}%` : "—"}</td>
-                    <td>{r.similarity_score != null ? r.similarity_score.toFixed(2) : "—"}</td>
-                    <td>
-                      <span className={`badge ${r.flagged ? "badge-flagged" : "badge-graded"}`}>
-                        {r.flagged ? r.flag_reason?.replaceAll("_", " ") : "graded"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <h3>Submissions for exam #{selectedExamId}</h3>
+          {submissions.length === 0 && <p className="muted">No submissions yet.</p>}
+          {submissions.map((sub) => (
+            <div key={sub.id} className="card" style={{ marginBottom: "0.75rem", background: "#fbf8f1" }}>
+              <div
+                onClick={() => toggle(sub.id)}
+                style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+              >
+                <div>
+                  <strong>{sub.student_name || "Unknown"}</strong>
+                  {sub.student_roll && <span className="muted" style={{ marginLeft: "0.5rem" }}>({sub.student_roll})</span>}
+                  <span className={`badge ${sub.status === "flagged" ? "badge-flagged" : sub.status === "graded" ? "badge-graded" : "badge-pending"}`} style={{ marginLeft: "0.75rem" }}>
+                    {sub.status}
+                  </span>
+                  <span className="muted" style={{ marginLeft: "0.75rem", fontSize: "0.82rem" }}>
+                    {sub.results.length} question{sub.results.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                <span style={{ fontSize: "0.85rem", color: "#888", userSelect: "none" }}>
+                  {expandedId === sub.id ? "▲ Hide" : "▼ Show"}
+                </span>
+              </div>
+
+              {expandedId === sub.id && (
+                <div style={{ marginTop: "0.75rem" }}>
+                  {sub.results.map((r) => (
+                    <div key={r.id} style={{ borderTop: "1px solid var(--paper-line)", padding: "0.75rem 0" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
+                        <strong>Q{r.question}</strong>
+                        <span>
+                          <strong>{r.marks_awarded ?? "—"}</strong> / {r.total_marks}
+                          {r.flagged && (
+                            <span className="badge badge-flagged" style={{ marginLeft: "0.5rem" }}>
+                              {r.flag_reason?.replaceAll("_", " ")}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.85rem" }}>
+                        <div>
+                          <span className="muted">OCR confidence:</span>{" "}
+                          {r.ocr_confidence != null ? `${r.ocr_confidence.toFixed(1)}%` : "—"}
+                        </div>
+                        <div>
+                          <span className="muted">Similarity:</span>{" "}
+                          {r.similarity_score != null ? r.similarity_score.toFixed(2) : "—"}
+                        </div>
+                      </div>
+                      {r.ocr_cleaned_text && (
+                        <details style={{ marginTop: "0.5rem" }}>
+                          <summary style={{ cursor: "pointer", fontSize: "0.82rem", color: "var(--ink-blue)" }}>
+                            OCR extracted text
+                          </summary>
+                          <pre style={{ margin: "0.4rem 0 0", padding: "0.6rem", background: "#fff", border: "1px solid var(--paper-line)", borderRadius: "var(--radius)", fontSize: "0.8rem", whiteSpace: "pre-wrap", maxHeight: "8em", overflow: "auto" }}>
+                            {r.ocr_cleaned_text}
+                          </pre>
+                        </details>
+                      )}
+                      {r.feedback && (
+                        <div style={{ marginTop: "0.5rem", padding: "0.5rem", background: "#fff", border: "1px solid var(--paper-line)", borderRadius: "var(--radius)", fontSize: "0.85rem" }}>
+                          <strong style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}>Feedback:</strong>
+                          <p style={{ margin: "0.25rem 0 0" }}>{r.feedback}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -257,7 +375,7 @@ function ReviewQueueCard({ queue }) {
 export default function TeacherDashboard() {
   const [exams, setExams] = useState([]);
   const [selectedExamId, setSelectedExamId] = useState(null);
-  const [results, setResults] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
   const [queue, setQueue] = useState([]);
 
   const loadExams = async () => {
@@ -286,10 +404,10 @@ export default function TeacherDashboard() {
   const handleSelectExam = async (examId) => {
     setSelectedExamId(examId);
     try {
-      const { data } = await teacherAPI.examResults(examId);
-      setResults(data);
+      const { data } = await teacherAPI.examSubmissions(examId);
+      setSubmissions(data);
     } catch {
-      setResults([]);
+      setSubmissions([]);
     }
   };
 
@@ -304,7 +422,7 @@ export default function TeacherDashboard() {
         exams={exams}
         onSelectExam={handleSelectExam}
         selectedExamId={selectedExamId}
-        results={results}
+        submissions={submissions}
       />
       <ReviewQueueCard queue={queue} />
     </div>
