@@ -42,6 +42,45 @@ class AdminReviewQueueView(generics.ListAPIView):
         return queryset
 
 
+def _apply_override(request, result):
+    """Shared logic for overriding a flagged result (used by admin + teacher)."""
+    review_entry = ManualReviewQueue.objects.filter(result=result, status="pending").order_by("-id").first()
+    if review_entry is None:
+        return Response(
+            {"detail": "This result has no pending manual review entry."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    serializer = AdminOverrideSerializer(data=request.data, context={"result": result})
+    serializer.is_valid(raise_exception=True)
+
+    override_marks = serializer.validated_data["override_marks"]
+    override_feedback = serializer.validated_data["override_feedback"]
+
+    # Apply the override onto the actual result the student/teacher see
+    result.marks_awarded = override_marks
+    result.feedback = override_feedback
+    result.flagged = False
+    result.save(update_fields=["marks_awarded", "feedback", "flagged"])
+
+    review_entry.status = "reviewed"
+    review_entry.reviewed_by = request.user
+    review_entry.override_marks = override_marks
+    review_entry.override_feedback = override_feedback
+    review_entry.reviewed_at = timezone.now()
+    review_entry.save(update_fields=[
+        "status", "reviewed_by", "override_marks", "override_feedback", "reviewed_at"
+    ])
+
+    # If every result for this submission is now unflagged, mark it graded.
+    submission = result.submission
+    if not submission.results.filter(flagged=True).exists():
+        submission.status = "graded"
+        submission.save(update_fields=["status"])
+
+    return Response(ManualReviewQueueSerializer(review_entry).data, status=status.HTTP_200_OK)
+
+
 class AdminReviewOverrideView(APIView):
     """
     POST /api/admin/review/{result_id}
@@ -59,41 +98,33 @@ class AdminReviewOverrideView(APIView):
         except DescriptiveResult.DoesNotExist:
             return Response({"detail": "Result not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        review_entry = ManualReviewQueue.objects.filter(result=result, status="pending").order_by("-id").first()
-        if review_entry is None:
+        return _apply_override(request, result)
+
+
+class TeacherReviewOverrideView(APIView):
+    """
+    POST /api/teacher/review/{result_id}
+    Body: {override_marks, override_feedback}
+
+    Lets a teacher review flagged answers from their own exams directly.
+    Behaviour is identical to the admin override, but scoped so a teacher
+    can only touch results belonging to exams they created.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsTeacher]
+
+    def post(self, request, result_id):
+        try:
+            result = DescriptiveResult.objects.get(id=result_id)
+        except DescriptiveResult.DoesNotExist:
+            return Response({"detail": "Result not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if result.submission.exam.teacher_id != request.user.id:
             return Response(
-                {"detail": "This result has no pending manual review entry."},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"detail": "This result does not belong to any of your exams."},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
-        serializer = AdminOverrideSerializer(data=request.data, context={"result": result})
-        serializer.is_valid(raise_exception=True)
-
-        override_marks = serializer.validated_data["override_marks"]
-        override_feedback = serializer.validated_data["override_feedback"]
-
-        # Apply the override onto the actual result the student/teacher see
-        result.marks_awarded = override_marks
-        result.feedback = override_feedback
-        result.flagged = False
-        result.save(update_fields=["marks_awarded", "feedback", "flagged"])
-
-        review_entry.status = "reviewed"
-        review_entry.reviewed_by = request.user
-        review_entry.override_marks = override_marks
-        review_entry.override_feedback = override_feedback
-        review_entry.reviewed_at = timezone.now()
-        review_entry.save(update_fields=[
-            "status", "reviewed_by", "override_marks", "override_feedback", "reviewed_at"
-        ])
-
-        # If every result for this submission is now unflagged, mark it graded.
-        submission = result.submission
-        if not submission.results.filter(flagged=True).exists():
-            submission.status = "graded"
-            submission.save(update_fields=["status"])
-
-        return Response(ManualReviewQueueSerializer(review_entry).data, status=status.HTTP_200_OK)
+        return _apply_override(request, result)
 
 
 class AdminAnalyticsView(APIView):

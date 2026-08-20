@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { teacherAPI } from "../services/api";
 import MaterialsList from "./MaterialsList";
+import EditExamCard from "./EditExamCard";
 
 function UploadMaterialCard() {
   const [subject, setSubject] = useState("");
@@ -243,10 +244,12 @@ function CreateExamCard({ onCreated }) {
   );
 }
 
-function ExamsAndResults({ exams, onSelectExam, selectedExamId, submissions }) {
+function ExamsAndResults({ exams, onSelectExam, selectedExamId, submissions, onEditExam, onDeleteExam }) {
   const [expandedId, setExpandedId] = useState(null);
+  const [expandedQuestionsId, setExpandedQuestionsId] = useState(null);
 
   const toggle = (id) => setExpandedId(expandedId === id ? null : id);
+  const toggleQuestions = (id) => setExpandedQuestionsId(expandedQuestionsId === id ? null : id);
 
   return (
     <div className="card">
@@ -254,18 +257,28 @@ function ExamsAndResults({ exams, onSelectExam, selectedExamId, submissions }) {
       {exams.length === 0 && <p className="muted">No exams yet — create one above.</p>}
       <table>
         <thead>
-          <tr><th>ID</th><th>Title</th><th>Subject</th><th>Created</th><th></th></tr>
+          <tr><th>ID</th><th>Exam code</th><th>Title</th><th>Subject</th><th>Created</th><th></th></tr>
         </thead>
         <tbody>
           {exams.map((exam) => (
             <tr key={exam.id}>
               <td><strong>{exam.id}</strong></td>
+              <td><code>{exam.access_code}</code></td>
               <td>{exam.title}</td>
               <td>{exam.subject}</td>
               <td>{new Date(exam.created_at).toLocaleDateString()}</td>
               <td>
+                <button className="btn btn-outline" onClick={() => toggleQuestions(exam.id)}>
+                  {expandedQuestionsId === exam.id ? "Hide questions" : "View questions"}
+                </button>{" "}
                 <button className="btn btn-outline" onClick={() => onSelectExam(exam.id)}>
                   View results
+                </button>{" "}
+                <button className="btn btn-outline" onClick={() => onEditExam(exam)}>
+                  Edit
+                </button>{" "}
+                <button className="btn btn-outline" onClick={() => onDeleteExam(exam)}>
+                  Delete
                 </button>
               </td>
             </tr>
@@ -273,101 +286,217 @@ function ExamsAndResults({ exams, onSelectExam, selectedExamId, submissions }) {
         </tbody>
       </table>
 
-      {selectedExamId && (
-        <div style={{ marginTop: "1.5rem" }}>
-          <h3>Submissions for exam #{selectedExamId}</h3>
-          {submissions.length === 0 && <p className="muted">No submissions yet.</p>}
-          {submissions.map((sub) => (
-            <div key={sub.id} className="card" style={{ marginBottom: "0.75rem", background: "#fbf8f1" }}>
-              <div
-                onClick={() => toggle(sub.id)}
-                style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
-              >
-                <div>
-                  <strong>{sub.student_name || "Unknown"}</strong>
-                  {sub.student_roll && <span className="muted" style={{ marginLeft: "0.5rem" }}>({sub.student_roll})</span>}
-                  <span className={`badge ${sub.status === "flagged" ? "badge-flagged" : sub.status === "graded" ? "badge-graded" : "badge-pending"}`} style={{ marginLeft: "0.75rem" }}>
-                    {sub.status}
-                  </span>
-                  <span className="muted" style={{ marginLeft: "0.75rem", fontSize: "0.82rem" }}>
-                    {sub.results.length} question{sub.results.length !== 1 ? "s" : ""}
-                  </span>
+      {expandedQuestionsId && (
+        (() => {
+          const exam = exams.find((e) => e.id === expandedQuestionsId);
+          if (!exam || !exam.questions?.length) return <p className="muted" style={{ marginTop: "1rem" }}>No questions for this exam.</p>;
+          return (
+            <div style={{ marginTop: "1rem" }}>
+              <h4 style={{ margin: "0 0 0.75rem" }}>Questions for "{exam.title}"</h4>
+              {exam.questions.map((q, i) => (
+                <div key={q.id ?? i} className="card" style={{ marginBottom: "0.75rem", background: "#fbf8f1" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
+                    <strong>Question {i + 1} <span className="muted" style={{ fontWeight: 400 }}>(ID #{q.id})</span></strong>
+                    <span>{q.total_marks} marks</span>
+                  </div>
+                  <p style={{ margin: "0 0 0.4rem", whiteSpace: "pre-wrap" }}>{q.question_text}</p>
+                  <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}><strong>Rubric:</strong> {q.rubric}</p>
                 </div>
-                <span style={{ fontSize: "0.85rem", color: "#888", userSelect: "none" }}>
-                  {expandedId === sub.id ? "▲ Hide" : "▼ Show"}
-                </span>
-              </div>
-
-              {expandedId === sub.id && (
-                <div style={{ marginTop: "0.75rem" }}>
-                  {sub.results.map((r) => (
-                    <div key={r.id} style={{ borderTop: "1px solid var(--paper-line)", padding: "0.75rem 0" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
-                        <strong>Q{r.question}</strong>
-                        <span>
-                          <strong>{r.marks_awarded ?? "—"}</strong> / {r.total_marks}
-                          {r.flagged && (
-                            <span className="badge badge-flagged" style={{ marginLeft: "0.5rem" }}>
-                              {r.flag_reason?.replaceAll("_", " ")}
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.85rem" }}>
-                        <div>
-                          <span className="muted">OCR confidence:</span>{" "}
-                          {r.ocr_confidence != null ? `${r.ocr_confidence.toFixed(1)}%` : "—"}
-                        </div>
-                        <div>
-                          <span className="muted">Similarity:</span>{" "}
-                          {r.similarity_score != null ? r.similarity_score.toFixed(2) : "—"}
-                        </div>
-                      </div>
-                      {r.ocr_cleaned_text && (
-                        <details style={{ marginTop: "0.5rem" }}>
-                          <summary style={{ cursor: "pointer", fontSize: "0.82rem", color: "var(--ink-blue)" }}>
-                            OCR extracted text
-                          </summary>
-                          <pre style={{ margin: "0.4rem 0 0", padding: "0.6rem", background: "#fff", border: "1px solid var(--paper-line)", borderRadius: "var(--radius)", fontSize: "0.8rem", whiteSpace: "pre-wrap", maxHeight: "8em", overflow: "auto" }}>
-                            {r.ocr_cleaned_text}
-                          </pre>
-                        </details>
-                      )}
-                      {r.feedback && (
-                        <div style={{ marginTop: "0.5rem", padding: "0.5rem", background: "#fff", border: "1px solid var(--paper-line)", borderRadius: "var(--radius)", fontSize: "0.85rem" }}>
-                          <strong style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}>Feedback:</strong>
-                          <p style={{ margin: "0.25rem 0 0" }}>{r.feedback}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+              ))}
             </div>
-          ))}
-        </div>
+          );
+        })()
       )}
+
+      {selectedExamId && (() => {
+        const selectedExam = exams.find((e) => e.id === selectedExamId);
+        const questionMap = {};
+        if (selectedExam?.questions) {
+          selectedExam.questions.forEach((q) => { questionMap[q.id] = q.question_text; });
+        }
+        return (
+          <div style={{ marginTop: "1.5rem" }}>
+            <h3>Submissions for exam #{selectedExamId}</h3>
+            {submissions.length === 0 && <p className="muted">No submissions yet.</p>}
+            {submissions.map((sub) => (
+              <div key={sub.id} className="card" style={{ marginBottom: "0.75rem", background: "#fbf8f1" }}>
+                <div
+                  onClick={() => toggle(sub.id)}
+                  style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                >
+                  <div>
+                    <strong>{sub.student_name || "Unknown"}</strong>
+                    {sub.student_roll && <span className="muted" style={{ marginLeft: "0.5rem" }}>({sub.student_roll})</span>}
+                    <span className={`badge ${sub.status === "flagged" ? "badge-flagged" : sub.status === "graded" ? "badge-graded" : "badge-pending"}`} style={{ marginLeft: "0.75rem" }}>
+                      {sub.status}
+                    </span>
+                    <span className="muted" style={{ marginLeft: "0.75rem", fontSize: "0.82rem" }}>
+                      {sub.results.length} question{sub.results.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: "0.85rem", color: "#888", userSelect: "none" }}>
+                    {expandedId === sub.id ? "▲ Hide" : "▼ Show"}
+                  </span>
+                </div>
+
+                {expandedId === sub.id && (
+                  <div style={{ marginTop: "0.75rem" }}>
+                    {sub.results.map((r) => (
+                      <div key={r.id} style={{ borderTop: "1px solid var(--paper-line)", padding: "0.75rem 0" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.4rem" }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <span className="muted" style={{ fontSize: "0.78rem" }}>Q{r.question}:</span>{" "}
+                            <strong style={{ whiteSpace: "pre-wrap" }}>{questionMap[r.question] || `Question #${r.question}`}</strong>
+                          </div>
+                          <span style={{ marginLeft: "0.75rem", whiteSpace: "nowrap" }}>
+                            <strong>{r.marks_awarded ?? "—"}</strong> / {r.total_marks}
+                            {r.flagged && (
+                              <span className="badge badge-flagged" style={{ marginLeft: "0.5rem" }}>
+                                {r.flag_reason?.replaceAll("_", " ")}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.85rem" }}>
+                          <div>
+                            <span className="muted">OCR confidence:</span>{" "}
+                            {r.ocr_confidence != null ? `${r.ocr_confidence.toFixed(1)}%` : "—"}
+                          </div>
+                          <div>
+                            <span className="muted">Similarity:</span>{" "}
+                            {r.similarity_score != null ? r.similarity_score.toFixed(2) : "—"}
+                          </div>
+                        </div>
+                        {r.ocr_cleaned_text && (
+                          <details style={{ marginTop: "0.5rem" }}>
+                            <summary style={{ cursor: "pointer", fontSize: "0.82rem", color: "var(--ink-blue)" }}>
+                              OCR extracted text
+                            </summary>
+                            <pre style={{ margin: "0.4rem 0 0", padding: "0.6rem", background: "#fff", border: "1px solid var(--paper-line)", borderRadius: "var(--radius)", fontSize: "0.8rem", whiteSpace: "pre-wrap", maxHeight: "8em", overflow: "auto" }}>
+                              {r.ocr_cleaned_text}
+                            </pre>
+                          </details>
+                        )}
+                        {r.retrieved_chunks?.length > 0 && (
+                          <details style={{ marginTop: "0.5rem" }}>
+                            <summary style={{ cursor: "pointer", fontSize: "0.82rem", color: "var(--ink-blue)" }}>
+                              Extracted chunks ({r.retrieved_chunks.length})
+                            </summary>
+                            <div style={{ margin: "0.4rem 0 0", maxHeight: "8em", overflow: "auto" }}>
+                              {r.retrieved_chunks.map((chunk, i) => (
+                                <pre key={i} style={{ margin: "0 0 0.5rem", padding: "0.6rem", background: "#fff", border: "1px solid var(--paper-line)", borderRadius: "var(--radius)", fontSize: "0.8rem", whiteSpace: "pre-wrap" }}>
+                                  <span style={{ fontWeight: 700, color: "var(--ink-soft)" }}>Chunk {i + 1}:</span>{" "}
+                                  {typeof chunk === "string" ? chunk : chunk.text || JSON.stringify(chunk)}
+                                </pre>
+                              ))}
+                            </div>
+                          </details>
+                        )}
+                        {r.feedback && (
+                          <div style={{ marginTop: "0.5rem", padding: "0.5rem", background: "#fff", border: "1px solid var(--paper-line)", borderRadius: "var(--radius)", fontSize: "0.85rem" }}>
+                            <strong style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}>Feedback:</strong>
+                            <p style={{ margin: "0.25rem 0 0" }}>{r.feedback}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }
 
-function ReviewQueueCard({ queue }) {
+function TeacherOverrideForm({ item, onDone, onClose }) {
+  const [marks, setMarks] = useState("");
+  const [feedback, setFeedback] = useState("");
+  const [status, setStatus] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus({ type: "loading" });
+    try {
+      await teacherAPI.reviewOverride(item.result.id, {
+        override_marks: Number(marks),
+        override_feedback: feedback,
+      });
+      setStatus({ type: "success" });
+      onDone();
+    } catch (err) {
+      setStatus({
+        type: "error",
+        message: err.response?.data?.detail || "Could not save override. Check the marks are in range.",
+      });
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} style={{ marginTop: "0.8rem", borderTop: "1px solid var(--paper-line)", paddingTop: "0.75rem" }}>
+      <div className="field">
+        <label>Marks (0–{item.result.total_marks})</label>
+        <input type="number" step="0.5" min={0} max={item.result.total_marks} required
+          value={marks} onChange={(e) => setMarks(e.target.value)} />
+      </div>
+      <div className="field">
+        <label>Feedback</label>
+        <textarea rows={3} required value={feedback} onChange={(e) => setFeedback(e.target.value)} />
+      </div>
+      <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+        <button className="btn btn-primary" type="submit" disabled={status?.type === "loading"}>
+          {status?.type === "loading" ? "Saving..." : "Review & save"}
+        </button>
+        <button className="btn btn-outline" type="button" onClick={onClose}>Close</button>
+        {status?.type === "error" && status.message && <span className="error-text">{status.message}</span>}
+      </div>
+    </form>
+  );
+}
+
+function ReviewQueueCard({ queue, onReviewed }) {
+  const [expandedId, setExpandedId] = useState(null);
+
+  const toggle = (id) => setExpandedId(expandedId === id ? null : id);
+
   return (
     <div className="card">
       <h3>Flagged answers pending review</h3>
       {queue.length === 0 && <p className="muted">Nothing flagged right now.</p>}
       {queue.map((item) => (
         <div key={item.id} className="card" style={{ marginBottom: "0.75rem", background: "#fbf8f1" }}>
-          <span className="badge badge-flagged">{item.reason.replaceAll("_", " ")}</span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem" }}>
+            <span className="badge badge-flagged">{item.reason.replaceAll("_", " ")}</span>
+            <span className="muted" style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>Result #{item.result.id}</span>
+          </div>
+
+          <p style={{ margin: "0.6rem 0 0.2rem" }}>
+            <strong>{item.student_name || "Unknown"}</strong>
+            {item.student_roll && <span className="muted" style={{ marginLeft: "0.5rem" }}>({item.student_roll})</span>}
+            {item.exam_title && <span className="muted" style={{ marginLeft: "0.5rem" }}>· {item.exam_title}</span>}
+          </p>
+          <p className="muted" style={{ margin: "0 0 0.5rem", fontSize: "0.85rem", whiteSpace: "pre-wrap" }}>
+            <strong>Q:</strong> {item.question_text || `Question #${item.result.question}`}
+          </p>
+
           <p style={{ marginBottom: "0.3em" }}><strong>OCR text:</strong> {item.result.ocr_cleaned_text || "(none)"}</p>
           <p className="muted" style={{ margin: 0 }}>
-            Confidence: {item.result.ocr_confidence?.toFixed(1)}% · Similarity: {item.result.similarity_score?.toFixed(2) ?? "n/a"}
+            Confidence: {item.result.ocr_confidence?.toFixed(1) ?? "—"}%
+            {" · "}Similarity: {item.result.similarity_score?.toFixed(2) ?? "n/a"}
+            {" · "}Marks so far: {item.result.marks_awarded ?? "—"} / {item.result.total_marks}
           </p>
+
+          {expandedId !== item.id ? (
+            <button className="btn btn-outline" style={{ marginTop: "0.6rem" }} onClick={() => toggle(item.id)}>
+              Review & override
+            </button>
+          ) : (
+            <TeacherOverrideForm item={item} onDone={onReviewed} onClose={() => toggle(item.id)} />
+          )}
         </div>
       ))}
-      <p className="muted" style={{ fontSize: "0.82rem" }}>
-        Overriding marks/feedback on a flagged answer is done from the Admin dashboard.
-      </p>
     </div>
   );
 }
@@ -377,6 +506,7 @@ export default function TeacherDashboard() {
   const [selectedExamId, setSelectedExamId] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [queue, setQueue] = useState([]);
+  const [editingExam, setEditingExam] = useState(null);
 
   const loadExams = async () => {
     try {
@@ -411,6 +541,25 @@ export default function TeacherDashboard() {
     }
   };
 
+  const handleExamSaved = async () => {
+    setEditingExam(null);
+    await loadExams();
+  };
+
+  const handleDeleteExam = async (exam) => {
+    if (!window.confirm(`Delete exam "${exam.title}" (ID ${exam.id}) and all of its submissions and results? This cannot be undone.`)) {
+      return;
+    }
+    try {
+      await teacherAPI.deleteExam(exam.id);
+      if (selectedExamId === exam.id) setSelectedExamId(null);
+      if (editingExam?.id === exam.id) setEditingExam(null);
+      await loadExams();
+    } catch {
+      window.alert("Could not delete the exam. Please try again.");
+    }
+  };
+
   return (
     <div style={{ display: "grid", gap: "1.5rem" }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
@@ -418,13 +567,22 @@ export default function TeacherDashboard() {
         <CreateExamCard onCreated={loadExams} />
       </div>
       <MaterialsList />
+      {editingExam && (
+        <EditExamCard
+          exam={editingExam}
+          onSaved={handleExamSaved}
+          onClose={() => setEditingExam(null)}
+        />
+      )}
       <ExamsAndResults
         exams={exams}
         onSelectExam={handleSelectExam}
+        onEditExam={setEditingExam}
+        onDeleteExam={handleDeleteExam}
         selectedExamId={selectedExamId}
         submissions={submissions}
       />
-      <ReviewQueueCard queue={queue} />
+      <ReviewQueueCard queue={queue} onReviewed={loadQueue} />
     </div>
   );
 }

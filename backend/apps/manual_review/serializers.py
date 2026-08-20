@@ -7,6 +7,10 @@ from apps.descriptive_grading.serializers import DescriptiveResultSerializer
 class ManualReviewQueueSerializer(serializers.ModelSerializer):
     result = DescriptiveResultSerializer(read_only=True)
     reviewed_by_name = serializers.CharField(source="reviewed_by.name", read_only=True, default=None)
+    student_name = serializers.CharField(source="result.submission.student.name", read_only=True, default=None)
+    student_roll = serializers.CharField(source="result.submission.student.roll_number", read_only=True, default="")
+    question_text = serializers.CharField(source="result.question.question_text", read_only=True, default=None)
+    exam_title = serializers.CharField(source="result.submission.exam.title", read_only=True, default=None)
 
     class Meta:
         model = ManualReviewQueue
@@ -14,6 +18,7 @@ class ManualReviewQueueSerializer(serializers.ModelSerializer):
             "id", "result", "reason", "status",
             "reviewed_by", "reviewed_by_name",
             "override_marks", "override_feedback", "reviewed_at",
+            "student_name", "student_roll", "question_text", "exam_title",
         ]
         read_only_fields = ["id", "result", "reason", "reviewed_by", "reviewed_by_name", "reviewed_at"]
 

@@ -83,7 +83,12 @@ function FlaggedItem({ item, onReviewed }) {
       {!expanded ? (
         <button className="btn btn-outline" onClick={() => setExpanded(true)}>Override marks & feedback</button>
       ) : (
-        <OverrideForm item={item} onDone={onReviewed} />
+        <>
+          <OverrideForm item={item} onDone={onReviewed} />
+          <button className="btn btn-outline" style={{ marginTop: "0.6rem" }} onClick={() => setExpanded(false)}>
+            Close
+          </button>
+        </>
       )}
     </div>
   );
