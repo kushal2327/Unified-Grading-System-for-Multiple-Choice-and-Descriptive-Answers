@@ -1,0 +1,27 @@
+# ---- Secrets ----
+.env
+.env.local
+*.pem
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+*.sqlite3
+
+# ---- Django media / generated data ----
+backend/media/
+backend/vector_store/
+
+# ---- Node / frontend ----
+node_modules/
+frontend/dist/
+npm-debug.log*
+
+# ---- Editor / OS ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
