@@ -24,12 +24,25 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
+
+def _delete_results_with_files(results):
+    """Delete a queryset of DescriptiveResult rows plus their stored media files."""
+    from django.core.files.storage import default_storage
+
+    for result in results:
+        if result.answer_sheet and result.answer_sheet.name:
+            try:
+                default_storage.delete(result.answer_sheet.name)
+            except Exception:
+                logger.exception("Failed to delete answer sheet media for result=%s", result.id)
+    results.delete()
+
 class ExamLookupByCodeView(APIView):
     """
     GET /api/student/exams/lookup?code=1234
     Look up an exam by its 4-digit teacher-set access code.
     """
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsStudent]
 
     def get(self, request):
         code = request.query_params.get("code", "").strip()
@@ -111,6 +124,18 @@ class ExamListView(generics.ListAPIView):
         return Exam.objects.filter(teacher=self.request.user).order_by("-created_at")
 
 
+class ExamUpdateView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    PATCH /api/teacher/exams/{id} -> edit an exam's details and its questions (or add new ones)
+    DELETE /api/teacher/exams/{id} -> delete the exam and everything tied to it
+    """
+    permission_classes = [permissions.IsAuthenticated, IsTeacher]
+    serializer_class = ExamSerializer
+
+    def get_queryset(self):
+        return Exam.objects.filter(teacher=self.request.user)
+
+
 class StudentSubmitAnswerView(APIView):
     """
     POST /api/student/submit-answer
@@ -145,6 +170,12 @@ class StudentSubmitAnswerView(APIView):
         saved_name = default_storage.save(save_path, image_file)
         full_path = default_storage.path(saved_name)
 
+        # Re-submitting a question replaces the student's previous upload
+        # (and any manual review entries linked to it).
+        _delete_results_with_files(
+            DescriptiveResult.objects.filter(submission=submission, question=question)
+        )
+
         try:
             result = grade_submission(submission, question, full_path)
         except Exception as exc:
@@ -155,6 +186,9 @@ class StudentSubmitAnswerView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+        result.answer_sheet = saved_name
+        result.save(update_fields=["answer_sheet"])
+
         return Response(
             {
                 "submission": SubmissionSerializer(submission).data,
@@ -164,21 +198,75 @@ class StudentSubmitAnswerView(APIView):
         )
 
 
-class StudentResultsView(generics.RetrieveAPIView):
-    """GET /api/student/results/{exam_id} -> student's own results for that exam"""
+class StudentResultsView(APIView):
+    """
+    GET /api/student/results/{exam_id_or_code}
+    Student's own results for an exam. Accepts either the numeric exam
+    ID or the 4-digit access code students already use to find exams.
+    """
     permission_classes = [permissions.IsAuthenticated, IsStudent]
-    serializer_class = SubmissionSerializer
-    lookup_url_kwarg = "exam_id"
 
-    def get_object(self):
-        exam_id = self.kwargs["exam_id"]
-        submission = Submission.objects.filter(
-            student=self.request.user, exam_id=exam_id
-        ).first()
+    def get(self, request, exam_id):
+        from rest_framework.exceptions import NotFound
+
+        lookup = str(exam_id)
+        submission = None
+
+        if len(lookup) == 4 and lookup.isdigit():
+            submission = Submission.objects.filter(
+                student=request.user, exam__access_code=lookup
+            ).first()
+
         if submission is None:
-            from rest_framework.exceptions import NotFound
+            submission = Submission.objects.filter(
+                student=request.user, exam_id=lookup
+            ).first()
+
+        if submission is None:
             raise NotFound("No submission found for this exam.")
-        return submission
+
+        return Response(SubmissionSerializer(submission).data)
+
+
+class StudentAnswerDeleteView(APIView):
+    """
+    DELETE /api/student/result/{result_id}
+    Deletes one of the student's own answer-sheet uploads so they can
+    re-upload a new one. Only allowed while the exam is still open
+    (before its deadline).
+    """
+    permission_classes = [permissions.IsAuthenticated, IsStudent]
+
+    def delete(self, request, result_id):
+        try:
+            result = DescriptiveResult.objects.select_related(
+                "submission", "submission__exam"
+            ).get(id=result_id, submission__student=request.user)
+        except DescriptiveResult.DoesNotExist:
+            return Response({"detail": "Answer sheet not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        exam = result.submission.exam
+        if timezone.now() > exam.valid_until:
+            return Response(
+                {
+                    "detail": (
+                        f"This exam closed on {exam.valid_until.strftime('%Y-%m-%d %H:%M')}. "
+                        "You can no longer edit or resubmit your answers."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        submission = result.submission
+        _delete_results_with_files(DescriptiveResult.objects.filter(id=result.id))
+
+        # If this was the last uploaded answer, reset the submission so the
+        # student can start fresh (the next upload recreates a graded state).
+        if not submission.results.exists():
+            submission.status = "pending"
+            submission.save(update_fields=["status"])
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TeacherExamResultsView(generics.ListAPIView):
@@ -213,7 +301,7 @@ class ExamQuestionsView(generics.RetrieveAPIView):
     rubric) so a student can see what to answer, and which
     question_id to use when submitting.
     """
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsStudent]
     serializer_class = ExamSerializer
     queryset = Exam.objects.all()
     lookup_url_kwarg = "exam_id"

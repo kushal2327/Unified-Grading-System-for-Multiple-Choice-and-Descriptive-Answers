@@ -42,8 +42,10 @@ class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         fields = ["id", "exam", "question_text", "total_marks", "rubric"]
-        read_only_fields = ["id"]
-        extra_kwargs = {"exam": {"required": False}}
+        extra_kwargs = {
+            "id": {"read_only": False, "required": False},
+            "exam": {"required": False},
+        }
 
 
 class ExamSerializer(serializers.ModelSerializer):
@@ -58,7 +60,10 @@ class ExamSerializer(serializers.ModelSerializer):
     def validate_access_code(self, value):
         if not re.fullmatch(r"\d{4}", value):
             raise serializers.ValidationError("Access code must be exactly 4 digits (e.g. 4821).")
-        if Exam.objects.filter(access_code=value).exists():
+        exists = Exam.objects.filter(access_code=value)
+        if self.instance is not None:
+            exists = exists.exclude(pk=self.instance.pk)
+        if exists.exists():
             raise serializers.ValidationError(
                 "This code is already used by another exam. Please choose a different 4-digit code."
             )
@@ -80,11 +85,41 @@ class ExamSerializer(serializers.ModelSerializer):
             Question.objects.create(exam=exam, **q)
         return exam
 
+    def update(self, instance, validated_data):
+        questions_data = validated_data.pop("questions", None)
+
+        instance.title = validated_data.get("title", instance.title)
+        instance.subject = validated_data.get("subject", instance.subject)
+        instance.access_code = validated_data.get("access_code", instance.access_code)
+        if validated_data.get("valid_until"):
+            instance.valid_until = validated_data["valid_until"]
+        instance.save()
+
+        if questions_data is not None:
+            for q_data in questions_data:
+                q_id = q_data.pop("id", None)
+                if q_id is not None:
+                    try:
+                        question = Question.objects.get(id=q_id, exam=instance)
+                    except Question.DoesNotExist:
+                        raise serializers.ValidationError({
+                            "questions": f"Question {q_id} does not belong to this exam."
+                        })
+                    for field in ("question_text", "total_marks", "rubric"):
+                        if field in q_data:
+                            setattr(question, field, q_data[field])
+                    question.save()
+                else:
+                    Question.objects.create(exam=instance, **q_data)
+
+        return instance
+
 class DescriptiveResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = DescriptiveResult
         fields = [
             "id", "submission", "question",
+            "answer_sheet",
             "ocr_raw_text", "ocr_cleaned_text", "ocr_confidence",
             "similarity_score", "retrieved_chunks",
             "marks_awarded", "total_marks",
@@ -122,10 +157,11 @@ class SubmitAnswerSerializer(serializers.Serializer):
 
 class SubmissionSerializer(serializers.ModelSerializer):
     results = DescriptiveResultSerializer(many=True, read_only=True)
+    valid_until = serializers.DateTimeField(source="exam.valid_until", read_only=True)
 
     class Meta:
         model = Submission
-        fields = ["id", "student", "exam", "submitted_at", "status", "results"]
+        fields = ["id", "student", "exam", "submitted_at", "status", "valid_until", "results"]
         read_only_fields = ["id", "student", "submitted_at", "status"]
 
 

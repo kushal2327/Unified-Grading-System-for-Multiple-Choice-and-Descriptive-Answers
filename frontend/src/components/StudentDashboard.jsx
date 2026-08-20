@@ -2,6 +2,8 @@ import { useState } from "react";
 import { studentAPI } from "../services/api";
 import ResultViewer from "./ResultViewer";
 
+const MEDIA_ORIGIN = new URL(import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api").origin;
+
 function QuestionBrowser({ onPick }) {
   const [code, setCode] = useState("");
   const [exam, setExam] = useState(null);
@@ -90,6 +92,7 @@ export default function StudentDashboard() {
   const [lookupExamId, setLookupExamId] = useState("");
   const [lookupResults, setLookupResults] = useState(null);
   const [lookupError, setLookupError] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
 
   const handlePickQuestion = (pickedExamId, pickedQuestionId) => {
     setExamId(String(pickedExamId));
@@ -131,6 +134,32 @@ export default function StudentDashboard() {
       setLookupResults(data);
     } catch (err) {
       setLookupError(err.response?.data?.detail || "No results found for that exam yet.");
+    }
+  };
+
+  const canEditResults =
+    lookupResults?.valid_until && new Date(lookupResults.valid_until) > new Date();
+
+  const handleDeleteResult = async (result) => {
+    if (!window.confirm("Delete this uploaded answer sheet? You can upload a new one before the deadline.")) {
+      return;
+    }
+    setDeletingId(result.id);
+    setLookupError("");
+    try {
+      await studentAPI.deleteResult(result.id);
+      // Pre-fill the submit form so the student can re-upload right away.
+      setExamId(String(lookupResults.exam));
+      setQuestionId(String(result.question));
+      setStatus(null);
+      setSubmissionResult(null);
+      const { data } = await studentAPI.examResults(lookupExamId);
+      setLookupResults(data);
+      document.getElementById("submit-answer-form")?.scrollIntoView({ behavior: "smooth" });
+    } catch (err) {
+      setLookupError(err.response?.data?.detail || "Could not delete the answer sheet.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -181,27 +210,60 @@ export default function StudentDashboard() {
         <h3>View past results</h3>
         <form onSubmit={handleLookup} style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end" }}>
           <div className="field" style={{ flex: 1, marginBottom: 0 }}>
-            <label htmlFor="lookup_exam_id">Exam ID</label>
+            <label htmlFor="lookup_exam_id">Exam code or ID</label>
             <input id="lookup_exam_id" type="number" required value={lookupExamId}
-              onChange={(e) => setLookupExamId(e.target.value)} />
+              onChange={(e) => setLookupExamId(e.target.value)} placeholder="e.g. 1111" />
           </div>
           <button className="btn btn-outline" type="submit">Look up</button>
         </form>
 
         {lookupError && <p className="error-text">{lookupError}</p>}
 
-        {lookupResults && (
-          <div style={{ marginTop: "1rem" }}>
-            <p className="muted">
+{lookupResults && (
+        <div style={{ marginTop: "1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+            <p className="muted" style={{ margin: 0 }}>
               Submission status: <span className={`badge badge-${lookupResults.status}`}>{lookupResults.status}</span>
+              {lookupResults.valid_until && (
+                <> · Deadline: {new Date(lookupResults.valid_until).toLocaleString()}</>
+              )}
             </p>
-            {lookupResults.results.map((r) => (
-              <div key={r.id} style={{ marginBottom: "1rem" }}>
-                <ResultViewer result={r} />
-              </div>
-            ))}
+            <button className="btn btn-outline" type="button" onClick={() => setLookupResults(null)}>
+              Close
+            </button>
           </div>
-        )}
+          {!canEditResults && (
+            <p className="muted" style={{ marginTop: 0 }}>
+              This exam has closed — answers can no longer be edited or resubmitted.
+            </p>
+          )}
+          {lookupResults.results.length === 0 && (
+            <p className="muted">No answer sheets uploaded for this exam yet.</p>
+          )}
+          {lookupResults.results.map((r) => (
+            <div key={r.id} style={{ marginBottom: "1rem" }}>
+              <ResultViewer result={r} />
+              {canEditResults && (
+                <div style={{ marginTop: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  {r.answer_sheet && (
+                    <a className="btn btn-outline" href={`${MEDIA_ORIGIN}${r.answer_sheet}`} target="_blank" rel="noreferrer">
+                      View uploaded sheet
+                    </a>
+                  )}
+                  <button
+                    className="btn btn-outline"
+                    type="button"
+                    disabled={deletingId === r.id}
+                    onClick={() => handleDeleteResult(r)}
+                  >
+                    {deletingId === r.id ? "Deleting..." : "Delete & resubmit"}
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
       </div>
     </div>
   );
