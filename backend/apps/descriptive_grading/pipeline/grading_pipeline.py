@@ -11,7 +11,7 @@ from django.conf import settings
 
 from ..models import DescriptiveResult
 from apps.manual_review.models import ManualReviewQueue
-from .rag import retrieve_context
+from .rag import retrieve_context, compute_answer_relevance
 from .llm_grader import build_prompt, grade_with_llm, validate_score, LLMGradingError
 from .vision_ocr import extract_and_clean
 
@@ -57,7 +57,7 @@ def grade_submission(submission, question, image_path):
         return result
 
     subject = question.exam.subject
-    rag_result = retrieve_context(ocr_result["cleaned_text"], subject)
+    rag_result = retrieve_context(question.question_text, subject)
 
     result.similarity_score = rag_result["similarity_score"]
     result.retrieved_chunks = rag_result["retrieved_chunks"]
@@ -67,6 +67,35 @@ def grade_submission(submission, question, image_path):
     if not rag_result["context_available"] and material_exists_for_subject:
         _flag(result, "low_similarity",
               f"similarity {rag_result['similarity_score']:.2f} < {settings.SIMILARITY_THRESHOLD}")
+
+    # Detect off-topic answers BEFORE LLM grading. The retrieval topic is
+    # fixed by the question; here we check whether the student actually
+    # answered the question. If not, award zero marks.
+    answer_relevance = compute_answer_relevance(question.question_text,
+                                                ocr_result["cleaned_text"])
+    if answer_relevance < settings.ANSWER_RELEVANCE_THRESHOLD:
+        result.marks_awarded = 0.0
+        result.feedback = (
+            "The submitted answer does not address the question. "
+            "It appears to be about a different topic, so no marks are awarded."
+        )
+        result.justification = {
+            "relevance": {
+                "status": "none",
+                "marks": 0,
+                "comment": (
+                    f"Answer-to-question relevance was {answer_relevance:.2f} "
+                    f"(below threshold {settings.ANSWER_RELEVANCE_THRESHOLD}); the "
+                    "answer covers a different topic than the question asks about."
+                ),
+            }
+        }
+        result.save(update_fields=["marks_awarded", "feedback", "justification"])
+        _flag(result, "off_topic",
+              f"answer relevance {answer_relevance:.2f} < {settings.ANSWER_RELEVANCE_THRESHOLD}")
+        submission.status = "graded"
+        submission.save(update_fields=["status"])
+        return result
 
     prompt = build_prompt(
         question_text=question.question_text,
@@ -85,11 +114,19 @@ def grade_submission(submission, question, image_path):
         submission.save(update_fields=["status"])
         return result
 
+    justification = llm_response.get("justification", {})
+    justification_sum = sum(
+        pt.get("marks", 0) for pt in justification.values() if isinstance(pt, dict)
+    )
+
     score_check = validate_score(llm_response, question.total_marks)
 
-    result.marks_awarded = score_check["marks"]
+    if justification and justification_sum > 0:
+        result.marks_awarded = min(justification_sum, float(question.total_marks))
+    else:
+        result.marks_awarded = score_check["marks"]
     result.feedback = llm_response.get("feedback", "")
-    result.justification = llm_response.get("justification", {})
+    result.justification = justification
     result.save(update_fields=["marks_awarded", "feedback", "justification"])
 
     if score_check["was_clamped"]:

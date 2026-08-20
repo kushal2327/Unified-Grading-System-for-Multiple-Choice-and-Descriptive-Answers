@@ -12,6 +12,20 @@ from .embeddings import embed_text
 from .vector_store import query_similar_chunks
 
 
+def compute_answer_relevance(question_text: str, answer_text: str) -> float:
+    """
+    Cosine similarity between the question and the student's answer.
+
+    A low score means the student answered a different topic than the
+    question asks about (e.g. question "Define coupling" but the answer
+    describes client-server architecture). Both embeddings are L2-normalized,
+    so the dot product equals the cosine similarity.
+    """
+    question_vector = embed_text(question_text)
+    answer_vector = embed_text(answer_text)
+    return float(sum(a * b for a, b in zip(question_vector, answer_vector)))
+
+
 def retrieve_context(cleaned_answer_text: str, subject: str) -> dict:
     """
     Run the retrieval step for a single student answer.
