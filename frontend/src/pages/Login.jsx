@@ -16,8 +16,8 @@ export default function Login() {
     setLoading(true);
     try {
       const { data } = await authAPI.login(form);
-      tokenStore.set(data.access, data.refresh);
-      tokenStore.setUser(data.user);
+      tokenStore.set(data.access, data.refresh, data.user.role);
+      tokenStore.setUser(data.user, data.user.role);
 
       if (data.user.role === "teacher") navigate("/teacher");
       else if (data.user.role === "student") navigate("/student");
