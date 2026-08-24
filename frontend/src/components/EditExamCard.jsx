@@ -1,15 +1,20 @@
 import { useState } from "react";
 import { teacherAPI } from "../services/api";
 
-function toDateValue(iso) {
-  return iso ? new Date(iso).toISOString().split("T")[0] : "";
+function toLocalDateValue(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
+
+const DEADLINE_TIME = "23:59";
 
 export default function EditExamCard({ exam, onSaved, onClose }) {
   const [title, setTitle] = useState(exam.title);
   const [subject, setSubject] = useState(exam.subject);
   const [accessCode, setAccessCode] = useState(exam.access_code);
-  const [validUntil, setValidUntil] = useState(toDateValue(exam.valid_until));
+  const [validUntil, setValidUntil] = useState(toLocalDateValue(exam.valid_until));
   const [questions, setQuestions] = useState(
     (exam.questions || []).map((q) => ({
       id: q.id,
@@ -39,7 +44,9 @@ export default function EditExamCard({ exam, onSaved, onClose }) {
         title,
         subject,
         access_code: accessCode,
-        valid_until: validUntil ? new Date(validUntil).toISOString() : undefined,
+        valid_until: validUntil
+          ? new Date(`${validUntil}T${DEADLINE_TIME}`).toISOString()
+          : undefined,
         questions: questions.map((q) => ({
           ...(q.id ? { id: q.id } : {}),
           question_text: q.question_text,
@@ -105,7 +112,7 @@ export default function EditExamCard({ exam, onSaved, onClose }) {
             />
           </div>
           <div className="field" style={{ flex: 1 }}>
-            <label htmlFor={`edit-until-${exam.id}`}>Valid until</label>
+            <label htmlFor={`edit-until-${exam.id}`}>Due date</label>
             <input id={`edit-until-${exam.id}`} type="date" required value={validUntil}
               onChange={(e) => setValidUntil(e.target.value)} />
           </div>

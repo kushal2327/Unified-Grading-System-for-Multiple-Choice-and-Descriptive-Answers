@@ -50,10 +50,11 @@ class QuestionSerializer(serializers.ModelSerializer):
 
 class ExamSerializer(serializers.ModelSerializer):
     questions = QuestionSerializer(many=True, required=False)
+    teacher_name = serializers.CharField(source="teacher.name", read_only=True)
 
     class Meta:
         model = Exam
-        fields = ["id", "title", "subject", "teacher", "access_code", "valid_until", "created_at", "questions"]
+        fields = ["id", "title", "subject", "teacher", "teacher_name", "access_code", "valid_until", "created_at", "questions"]
         read_only_fields = ["id", "teacher", "created_at"]
         extra_kwargs = {"valid_until": {"required": False}}
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { adminAPI } from "../services/api";
+import AnalyticsPanel from "./AnalyticsPanel";
 
 function OverrideForm({ item, onDone }) {
   const [marks, setMarks] = useState("");
@@ -94,44 +95,6 @@ function FlaggedItem({ item, onReviewed }) {
   );
 }
 
-function AnalyticsCard({ analytics }) {
-  if (!analytics) return null;
-  return (
-    <div className="card">
-      <h3>Analytics</h3>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
-        <Stat label="Submissions" value={analytics.total_submissions} />
-        <Stat label="Results" value={analytics.total_results} />
-        <Stat label="Flag rate" value={`${analytics.flag_rate_percent}%`} />
-        <Stat label="Avg score" value={analytics.average_score_percent != null ? `${analytics.average_score_percent}%` : "—"} />
-        <Stat label="Avg OCR confidence" value={analytics.average_ocr_confidence != null ? `${analytics.average_ocr_confidence}%` : "—"} />
-      </div>
-      {analytics.flag_reason_breakdown?.length > 0 && (
-        <div style={{ marginTop: "1rem" }}>
-          <label>Flag reasons</label>
-          <table>
-            <thead><tr><th>Reason</th><th>Count</th></tr></thead>
-            <tbody>
-              {analytics.flag_reason_breakdown.map((row) => (
-                <tr key={row.reason}><td>{row.reason.replaceAll("_", " ")}</td><td>{row.count}</td></tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Stat({ label, value }) {
-  return (
-    <div>
-      <div style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", color: "var(--ink-blue-deep)" }}>{value}</div>
-      <div className="muted" style={{ fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.03em" }}>{label}</div>
-    </div>
-  );
-}
-
 export default function ManualReviewDashboard() {
   const [queue, setQueue] = useState([]);
   const [analytics, setAnalytics] = useState(null);
@@ -157,7 +120,7 @@ export default function ManualReviewDashboard() {
 
   return (
     <div style={{ display: "grid", gap: "1.5rem" }}>
-      <AnalyticsCard analytics={analytics} />
+      <AnalyticsPanel analytics={analytics} />
       <div className="card">
         <h3>Flagged answers — all exams</h3>
         {loading && <p className="muted">Loading...</p>}

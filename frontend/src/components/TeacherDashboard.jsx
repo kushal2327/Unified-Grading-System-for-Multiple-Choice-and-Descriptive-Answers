@@ -70,6 +70,15 @@ function defaultValidUntil() {
   return d.toISOString().split("T")[0];
 }
 
+const DEADLINE_TIME = "23:59";
+
+function formatDeadline(iso) {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return `${date}, ${time}`;
+}
+
 function CreateExamCard({ onCreated }) {
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
@@ -101,7 +110,9 @@ function CreateExamCard({ onCreated }) {
         title,
         subject,
         access_code: accessCode,
-        valid_until: validUntil ? new Date(validUntil).toISOString() : undefined,
+        valid_until: validUntil
+          ? new Date(`${validUntil}T${DEADLINE_TIME}`).toISOString()
+          : undefined,
         questions: questions.map((q) => ({ ...q, total_marks: Number(q.total_marks) })),
       });
       setStatus({ type: "success", message: "Exam created — share the code below with your students." });
@@ -167,7 +178,7 @@ function CreateExamCard({ onCreated }) {
             />
           </div>
           <div className="field" style={{ flex: 1 }}>
-            <label htmlFor="valid-until">Valid until</label>
+            <label htmlFor="valid-until">Due date</label>
             <input
               id="valid-until" type="date" required
               value={validUntil}
@@ -176,7 +187,7 @@ function CreateExamCard({ onCreated }) {
           </div>
         </div>
         <p className="muted" style={{ marginTop: "-0.5rem", fontSize: "0.78rem" }}>
-          Students will use this 4-digit code to find the exam. Defaults to 1 week from today.
+          Students will use this 4-digit code to find the exam. The deadline is always at 11:59 PM on the chosen date.
         </p>
 
         <label>Questions</label>
@@ -227,7 +238,7 @@ function CreateExamCard({ onCreated }) {
         <div className="card" style={{ marginTop: "0.8rem", background: "#e3ede4" }}>
           <p style={{ margin: 0 }}>
             <strong>Exam code: {createdExam.access_code}</strong>
-            {" · "}Valid until {new Date(createdExam.valid_until).toLocaleDateString()}
+            {" · "}Due {formatDeadline(createdExam.valid_until)}
           </p>
           <p style={{ margin: "0.4em 0 0" }}>Question IDs:</p>
           <ul style={{ margin: "0.2em 0 0" }}>

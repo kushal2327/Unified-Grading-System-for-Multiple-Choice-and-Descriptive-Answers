@@ -4,6 +4,13 @@ import ResultViewer from "./ResultViewer";
 
 const MEDIA_ORIGIN = new URL(import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api").origin;
 
+function formatDeadline(iso) {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return `${date}, ${time}`;
+}
+
 function QuestionBrowser({ onPick }) {
   const [code, setCode] = useState("");
   const [exam, setExam] = useState(null);
@@ -54,7 +61,10 @@ function QuestionBrowser({ onPick }) {
             {exam.title} <span className="muted" style={{ fontWeight: 400, fontSize: "0.8rem" }}>({exam.subject})</span>
           </h3>
           <p className="muted" style={{ fontSize: "0.8rem", marginTop: 0 }}>
-            Valid until {new Date(exam.valid_until).toLocaleDateString()}
+            Teacher: <strong style={{ color: "var(--ink-blue)" }}>{exam.teacher_name || "Unknown"}</strong>
+          </p>
+          <p className="muted" style={{ fontSize: "0.8rem", marginTop: 0 }}>
+            Due {formatDeadline(exam.valid_until)}
           </p>
           {exam.questions.length === 0 && <p className="muted">No questions on this exam yet.</p>}
           <table>
@@ -225,7 +235,7 @@ export default function StudentDashboard() {
             <p className="muted" style={{ margin: 0 }}>
               Submission status: <span className={`badge badge-${lookupResults.status}`}>{lookupResults.status}</span>
               {lookupResults.valid_until && (
-                <> · Deadline: {new Date(lookupResults.valid_until).toLocaleString()}</>
+                <> · Due: {formatDeadline(lookupResults.valid_until)}</>
               )}
             </p>
             <button className="btn btn-outline" type="button" onClick={() => setLookupResults(null)}>
