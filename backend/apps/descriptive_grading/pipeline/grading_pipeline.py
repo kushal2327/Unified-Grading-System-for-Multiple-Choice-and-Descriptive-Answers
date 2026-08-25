@@ -13,7 +13,7 @@ from ..models import DescriptiveResult
 from apps.manual_review.models import ManualReviewQueue
 from .rag import retrieve_context, compute_answer_relevance
 from .llm_grader import build_prompt, grade_with_llm, validate_score, LLMGradingError
-from .vision_ocr import extract_and_clean
+from .vision_ocr import extract_and_clean, VisionOCRError
 
 logger = logging.getLogger(__name__)
 
