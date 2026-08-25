@@ -9,6 +9,7 @@ from apps.authentication.permissions import IsTeacher, IsStudent
 from .models import TeacherMaterial, Exam, Question, Submission, DescriptiveResult
 from .pipeline.material_ingestion import process_teacher_material
 from .pipeline.grading_pipeline import grade_submission
+from .pipeline.vision_ocr import VisionOCRError, check_ollama_status
 from .pipeline.vector_store import get_chunks_for_material
 from .serializers import (
     TeacherMaterialSerializer,
@@ -178,6 +179,13 @@ class StudentSubmitAnswerView(APIView):
 
         try:
             result = grade_submission(submission, question, full_path)
+        except VisionOCRError as exc:
+            logger.error("Vision OCR failed for submission=%s question=%s: %s",
+                         submission.id, question.id, exc)
+            return Response(
+                {"error": f"Handwriting recognition failed: {exc}"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         except Exception as exc:
             logger.exception("Grading pipeline crashed for submission=%s question=%s",
                               submission.id, question.id)
@@ -332,3 +340,17 @@ class MaterialChunksView(APIView):
             "num_chunks": len(chunks),
             "chunks": chunks,
         })
+
+
+class VisionModelStatusView(APIView):
+    """
+    GET /api/teacher/vision-status
+    Diagnostic endpoint: checks if Ollama is running and the vision
+    model is available. Useful for troubleshooting handwriting
+    recognition failures.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsTeacher]
+
+    def get(self, request):
+        status_info = check_ollama_status()
+        return Response(status_info)

@@ -13,6 +13,7 @@ from .views import (
     ExamQuestionsView,
     MaterialChunksView,
     ExamLookupByCodeView,
+    VisionModelStatusView,
 )
 
 urlpatterns = [
@@ -29,4 +30,5 @@ urlpatterns = [
     path("teacher/results/<int:exam_id>", TeacherExamResultsView.as_view(), name="teacher-results"),
     path("teacher/submissions/<int:exam_id>", TeacherExamSubmissionsView.as_view(), name="teacher-submissions"),
     path("teacher/materials/<int:material_id>/chunks", MaterialChunksView.as_view(), name="teacher-material-chunks"),
+    path("teacher/vision-status", VisionModelStatusView.as_view(), name="teacher-vision-status"),
 ]
