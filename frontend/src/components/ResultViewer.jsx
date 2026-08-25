@@ -55,11 +55,29 @@ export default function ResultViewer({ result }) {
       )}
 
       {(result.ocr_confidence != null || result.similarity_score != null) && (
-        <p className="muted" style={{ marginTop: "0.8rem", fontSize: "0.8rem" }}>
-          OCR confidence: {result.ocr_confidence?.toFixed(1) ?? "—"}%
-          {" · "}
-          Reference match: {result.similarity_score != null ? result.similarity_score.toFixed(2) : "n/a"}
-        </p>
+        <div style={{ marginTop: "0.8rem", fontSize: "0.8rem" }}>
+          {result.ocr_confidence != null && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.3rem" }}>
+              <span className="muted">OCR confidence:</span>
+              <div style={{
+                width: "80px", height: "6px", background: "#e0e0e0", borderRadius: "3px", overflow: "hidden"
+              }}>
+                <div style={{
+                  width: `${result.ocr_confidence}%`, height: "100%",
+                  background: result.ocr_confidence >= 70 ? "#4caf50" : result.ocr_confidence >= 40 ? "#ff9800" : "#f44336",
+                  borderRadius: "3px",
+                }} />
+              </div>
+              <span style={{
+                fontWeight: 600,
+                color: result.ocr_confidence >= 70 ? "#4caf50" : result.ocr_confidence >= 40 ? "#ff9800" : "#f44336",
+              }}>{result.ocr_confidence.toFixed(1)}%</span>
+            </div>
+          )}
+          {result.similarity_score != null && (
+            <span className="muted">Reference match: {result.similarity_score.toFixed(2)}</span>
+          )}
+        </div>
       )}
     </div>
   );
