@@ -109,6 +109,15 @@ class DescriptiveResult(models.Model):
     marks_awarded = models.FloatField(blank=True, null=True)
     total_marks = models.FloatField()
 
+    ground_truth_marks = models.FloatField(
+        blank=True, null=True,
+        help_text=(
+            "Independently assigned teacher mark for evaluation purposes "
+            "(distinct from manual_review overrides, which only exist for "
+            "flagged/disputed results)."
+        ),
+    )
+
     feedback = models.TextField(blank=True, null=True)
     justification = models.JSONField(blank=True, null=True, default=dict)
 

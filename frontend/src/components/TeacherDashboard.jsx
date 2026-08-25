@@ -70,7 +70,7 @@ function defaultValidUntil() {
   return d.toISOString().split("T")[0];
 }
 
-const DEADLINE_TIME = "23:59";
+const DEFAULT_DEADLINE_TIME = "23:59";
 
 function formatDeadline(iso) {
   const d = new Date(iso);
@@ -84,6 +84,7 @@ function CreateExamCard({ onCreated }) {
   const [subject, setSubject] = useState("");
   const [accessCode, setAccessCode] = useState("");
   const [validUntil, setValidUntil] = useState(defaultValidUntil());
+  const [deadlineTime, setDeadlineTime] = useState(DEFAULT_DEADLINE_TIME);
   const [questions, setQuestions] = useState([
     { question_text: "", total_marks: 10, rubric: "" },
   ]);
@@ -111,7 +112,7 @@ function CreateExamCard({ onCreated }) {
         subject,
         access_code: accessCode,
         valid_until: validUntil
-          ? new Date(`${validUntil}T${DEADLINE_TIME}`).toISOString()
+          ? new Date(`${validUntil}T${deadlineTime}`).toISOString()
           : undefined,
         questions: questions.map((q) => ({ ...q, total_marks: Number(q.total_marks) })),
       });
@@ -119,6 +120,7 @@ function CreateExamCard({ onCreated }) {
       setCreatedExam(data);
       setTitle(""); setSubject(""); setAccessCode("");
       setValidUntil(defaultValidUntil());
+      setDeadlineTime(DEFAULT_DEADLINE_TIME);
       setQuestions([{ question_text: "", total_marks: 10, rubric: "" }]);
       onCreated?.();
     } catch (err) {
@@ -185,9 +187,17 @@ function CreateExamCard({ onCreated }) {
               onChange={(e) => setValidUntil(e.target.value)}
             />
           </div>
+          <div className="field" style={{ flex: 1 }}>
+            <label htmlFor="deadline-time">Due time</label>
+            <input
+              id="deadline-time" type="time" required
+              value={deadlineTime}
+              onChange={(e) => setDeadlineTime(e.target.value)}
+            />
+          </div>
         </div>
         <p className="muted" style={{ marginTop: "-0.5rem", fontSize: "0.78rem" }}>
-          Students will use this 4-digit code to find the exam. The deadline is always at 11:59 PM on the chosen date.
+          Students will use this 4-digit code to find the exam. The deadline defaults to 11:59 PM if no time is set.
         </p>
 
         <label>Questions</label>

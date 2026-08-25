@@ -8,13 +8,19 @@ function toLocalDateValue(iso) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-const DEADLINE_TIME = "23:59";
+function toLocalTimeValue(iso) {
+  if (!iso) return "23:59";
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 export default function EditExamCard({ exam, onSaved, onClose }) {
   const [title, setTitle] = useState(exam.title);
   const [subject, setSubject] = useState(exam.subject);
   const [accessCode, setAccessCode] = useState(exam.access_code);
   const [validUntil, setValidUntil] = useState(toLocalDateValue(exam.valid_until));
+  const [deadlineTime, setDeadlineTime] = useState(toLocalTimeValue(exam.valid_until));
   const [questions, setQuestions] = useState(
     (exam.questions || []).map((q) => ({
       id: q.id,
@@ -45,7 +51,7 @@ export default function EditExamCard({ exam, onSaved, onClose }) {
         subject,
         access_code: accessCode,
         valid_until: validUntil
-          ? new Date(`${validUntil}T${DEADLINE_TIME}`).toISOString()
+          ? new Date(`${validUntil}T${deadlineTime}`).toISOString()
           : undefined,
         questions: questions.map((q) => ({
           ...(q.id ? { id: q.id } : {}),
@@ -115,6 +121,11 @@ export default function EditExamCard({ exam, onSaved, onClose }) {
             <label htmlFor={`edit-until-${exam.id}`}>Due date</label>
             <input id={`edit-until-${exam.id}`} type="date" required value={validUntil}
               onChange={(e) => setValidUntil(e.target.value)} />
+          </div>
+          <div className="field" style={{ flex: 1 }}>
+            <label htmlFor={`edit-time-${exam.id}`}>Due time</label>
+            <input id={`edit-time-${exam.id}`} type="time" required value={deadlineTime}
+              onChange={(e) => setDeadlineTime(e.target.value)} />
           </div>
         </div>
 
