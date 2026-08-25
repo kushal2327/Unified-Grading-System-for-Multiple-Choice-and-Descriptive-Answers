@@ -3,6 +3,41 @@ import { teacherAPI } from "../services/api";
 import MaterialsList from "./MaterialsList";
 import EditExamCard from "./EditExamCard";
 
+function VisionStatusBadge() {
+  const [status, setStatus] = useState(null);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    teacherAPI.visionStatus()
+      .then(({ data }) => setStatus(data))
+      .catch(() => setStatus({ error: "Could not check vision model status" }))
+      .finally(() => setChecking(false));
+  }, []);
+
+  if (checking) return null;
+
+  const ok = status?.ollama_running && status?.vision_model_available;
+  return (
+    <div className="card" style={{ background: ok ? "#e3ede4" : "#fde8e8", marginBottom: "0.5rem" }}>
+      <p style={{ margin: 0, fontSize: "0.85rem" }}>
+        <strong>Vision model (handwriting recognition):</strong>{" "}
+        {ok ? (
+          <span style={{ color: "#2d7a3a" }}>Ready ({status?.vision_model_available ? "qwen2.5vl detected" : "running"})</span>
+        ) : (
+          <span style={{ color: "#c0392b" }}>
+            {status?.error || "Not available — handwritten answers will fail to grade"}
+          </span>
+        )}
+      </p>
+      {!ok && (
+        <p style={{ margin: "0.4rem 0 0", fontSize: "0.78rem", color: "#888" }}>
+          To fix: (1) Start Ollama: <code>ollama serve</code> (2) Pull vision model: <code>ollama pull qwen2.5vl:3b</code>
+        </p>
+      )}
+    </div>
+  );
+}
+
 function UploadMaterialCard() {
   const [subject, setSubject] = useState("");
   const [file, setFile] = useState(null);
@@ -583,6 +618,7 @@ export default function TeacherDashboard() {
 
   return (
     <div style={{ display: "grid", gap: "1.5rem" }}>
+      <VisionStatusBadge />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
         <UploadMaterialCard />
         <CreateExamCard onCreated={loadExams} />
