@@ -147,12 +147,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ------------------------------------------------------------------
 # Grading pipeline configuration (read by pipeline modules)
 # ------------------------------------------------------------------
-SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", 0.45))
+SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", 0.30))
 ANSWER_RELEVANCE_THRESHOLD = float(os.getenv("ANSWER_RELEVANCE_THRESHOLD", 0.4))
 TOP_K_CHUNKS = int(os.getenv("TOP_K_CHUNKS", 3))
 OCR_CONFIDENCE_THRESHOLD = float(os.getenv("OCR_CONFIDENCE_THRESHOLD", 60))
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", 500))
-CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", 50))
+CHUNK_OVERLAP_PCT = int(os.getenv("CHUNK_OVERLAP_PCT", 20))  # 0-20% overlap
 TESSERACT_CMD = os.getenv("TESSERACT_CMD", "")
 
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama")

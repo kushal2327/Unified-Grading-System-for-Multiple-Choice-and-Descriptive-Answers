@@ -14,6 +14,7 @@ from .views import (
     MaterialChunksView,
     ExamLookupByCodeView,
     VisionModelStatusView,
+    QuestionRelevantChunksView,
 )
 
 urlpatterns = [
@@ -30,5 +31,6 @@ urlpatterns = [
     path("teacher/results/<int:exam_id>", TeacherExamResultsView.as_view(), name="teacher-results"),
     path("teacher/submissions/<int:exam_id>", TeacherExamSubmissionsView.as_view(), name="teacher-submissions"),
     path("teacher/materials/<int:material_id>/chunks", MaterialChunksView.as_view(), name="teacher-material-chunks"),
+    path("teacher/exams/<int:exam_id>/questions/<int:question_id>/chunks", QuestionRelevantChunksView.as_view(), name="teacher-question-chunks"),
     path("teacher/vision-status", VisionModelStatusView.as_view(), name="teacher-vision-status"),
 ]

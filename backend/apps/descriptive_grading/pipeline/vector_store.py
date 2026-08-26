@@ -49,7 +49,11 @@ def get_chunks_for_material(material_id: int) -> list:
     metadatas = result.get("metadatas", [])
 
     chunks = [
-        {"chunk_index": meta.get("chunk_index", i), "text": doc}
+        {
+            "chunk_index": meta.get("chunk_index", i),
+            "text": doc,
+            "overlap_pct": meta.get("overlap_pct", 0.0),
+        }
         for i, (doc, meta) in enumerate(zip(documents, metadatas))
     ]
     chunks.sort(key=lambda c: c["chunk_index"])
@@ -62,15 +66,18 @@ def store_chunks(
     teacher_id: int,
     material_id: int,
     chapter: Optional[str] = "",
+    overlap_pcts: Optional[List[float]] = None,
 ) -> List[str]:
     """
     Store a batch of chunk texts + their vectors in ChromaDB with metadata:
-    {subject, teacher_id, chapter, chunk_index, material_id}
+    {subject, teacher_id, chapter, chunk_index, material_id, overlap_pct}
 
     Returns the list of generated chunk ids.
     """
     collection = get_collection()
     ids = [f"mat{material_id}-chunk{i}-{uuid.uuid4().hex[:8]}" for i in range(len(chunks))]
+    if overlap_pcts is None:
+        overlap_pcts = [0.0] * len(chunks)
     metadatas = [
         {
             "subject": subject,
@@ -78,6 +85,7 @@ def store_chunks(
             "chapter": chapter or "",
             "chunk_index": i,
             "material_id": material_id,
+            "overlap_pct": overlap_pcts[i],
         }
         for i in range(len(chunks))
     ]
@@ -98,30 +106,47 @@ def query_similar_chunks(
 ) -> Dict:
     """
     Query ChromaDB for the top-k chunks most similar to query_vector,
-    restricted to the given subject.
+    restricted to the given subject (case-insensitive).
 
-    Returns a dict: {"documents": [...], "distances": [...], "ids": [...]}
-    where distances are cosine distances (0 = identical, 2 = opposite).
-    We convert to a similarity score (1 - distance) before returning
-    so callers can compare directly against SIMILARITY_THRESHOLD.
+    Returns a dict: {"documents": [...], "similarities": [...], "ids": [...]}
+    where similarities are cosine similarity scores (1 = identical, 0 = opposite).
     """
     collection = get_collection()
 
     if collection.count() == 0:
         return {"documents": [], "similarities": [], "ids": []}
 
+    # Query without subject filter (ChromaDB subject filter is case-sensitive
+    # and brittle).  We over-fetch, then filter by subject in Python.
+    fetch_n = max(n_results * 5, 20)
     results = collection.query(
         query_embeddings=[query_vector],
-        n_results=n_results,
-        where={"subject": subject},
+        n_results=fetch_n,
     )
 
-    documents = results.get("documents", [[]])[0]
-    distances = results.get("distances", [[]])[0]
-    ids = results.get("ids", [[]])[0]
+    all_documents = results.get("documents", [[]])[0]
+    all_distances = results.get("distances", [[]])[0]
+    all_ids = results.get("ids", [[]])[0]
+    all_metadatas = results.get("metadatas", [[]])[0]
 
-    # ChromaDB's cosine "distance" is 1 - cosine_similarity, so
-    # similarity = 1 - distance.
-    similarities = [1 - d for d in distances]
+    # Filter to only chunks whose subject matches (case-insensitive)
+    subject_lower = subject.strip().lower()
+    documents, similarities, ids, metadatas = [], [], [], []
+    for doc, dist, cid, meta in zip(all_documents, all_distances, all_ids, all_metadatas):
+        chunk_subject = (meta.get("subject") or "").strip().lower()
+        if chunk_subject == subject_lower:
+            documents.append(doc)
+            similarities.append(1 - dist)
+            ids.append(cid)
+            metadatas.append(meta)
 
-    return {"documents": documents, "similarities": similarities, "ids": ids}
+    # If no subject match found, return top results anyway so the teacher
+    # can see what was retrieved (better than showing nothing).
+    if not documents:
+        for doc, dist, cid, meta in zip(all_documents[:n_results], all_distances[:n_results], all_ids[:n_results], all_metadatas[:n_results]):
+            documents.append(doc)
+            similarities.append(1 - dist)
+            ids.append(cid)
+            metadatas.append(meta)
+
+    return {"documents": documents, "similarities": similarities, "ids": ids, "metadatas": metadatas}

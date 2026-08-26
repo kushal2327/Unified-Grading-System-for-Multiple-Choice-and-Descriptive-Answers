@@ -130,10 +130,9 @@ class DescriptiveResultSerializer(serializers.ModelSerializer):
 
 
 class SubmitAnswerSerializer(serializers.Serializer):
-    """POST /api/student/submit-answer - accepts exam_id, question_id, image_file."""
+    """POST /api/student/submit-answer - accepts exam_id, question_id, image_file(s)."""
     exam_id = serializers.IntegerField()
     question_id = serializers.IntegerField()
-    image_file = serializers.ImageField()
 
     def validate(self, attrs):
         try:

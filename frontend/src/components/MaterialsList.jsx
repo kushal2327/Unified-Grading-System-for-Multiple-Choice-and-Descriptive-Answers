@@ -46,9 +46,21 @@ function MaterialRow({ material }) {
             )}
             {!loading && chunks && chunks.map((c) => (
               <div key={c.chunk_index} className="card" style={{ marginBottom: "0.5rem", background: "#fbf8f1" }}>
-                <p className="muted" style={{ margin: "0 0 0.3em", fontSize: "0.75rem" }}>
-                  Chunk {c.chunk_index}
-                </p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "0 0 0.3em" }}>
+                  <p className="muted" style={{ margin: 0, fontSize: "0.75rem" }}>
+                    Chunk {c.chunk_index}
+                  </p>
+                  <span style={{
+                    fontSize: "0.7rem",
+                    padding: "0.15em 0.5em",
+                    borderRadius: "4px",
+                    background: c.overlap_pct === 0 ? "#e8f5e9" : "#fff3e0",
+                    color: c.overlap_pct === 0 ? "#2e7d32" : "#e65100",
+                    fontWeight: 600,
+                  }}>
+                    {c.overlap_pct === 0 ? "New paragraph" : `${c.overlap_pct}% overlap`}
+                  </span>
+                </div>
                 <p style={{ margin: 0, fontSize: "0.88rem" }}>{c.text}</p>
               </div>
             ))}

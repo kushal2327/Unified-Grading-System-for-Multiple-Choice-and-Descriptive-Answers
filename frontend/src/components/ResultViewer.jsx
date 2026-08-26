@@ -2,6 +2,13 @@ export default function ResultViewer({ result }) {
   const justification = result.justification || {};
   const points = Object.entries(justification);
 
+  const uploadedAt = result.created_at
+    ? new Date(result.created_at).toLocaleString(undefined, {
+        year: "numeric", month: "short", day: "numeric",
+        hour: "numeric", minute: "2-digit",
+      })
+    : null;
+
   return (
     <div className="card" style={{ background: "#fbf8f1" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -12,6 +19,12 @@ export default function ResultViewer({ result }) {
           <span className="badge badge-flagged">{result.flag_reason?.replaceAll("_", " ")}</span>
         )}
       </div>
+
+      {uploadedAt && (
+        <p className="muted" style={{ margin: "0.3rem 0 0", fontSize: "0.78rem" }}>
+          Uploaded: {uploadedAt}
+        </p>
+      )}
 
       {result.flagged && !result.feedback && (
         <p className="muted" style={{ marginTop: "0.6rem" }}>
@@ -74,9 +87,7 @@ export default function ResultViewer({ result }) {
               }}>{result.ocr_confidence.toFixed(1)}%</span>
             </div>
           )}
-          {result.similarity_score != null && (
-            <span className="muted">Reference match: {result.similarity_score.toFixed(2)}</span>
-          )}
+
         </div>
       )}
     </div>

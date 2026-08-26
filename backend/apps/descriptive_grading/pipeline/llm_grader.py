@@ -67,6 +67,16 @@ Instructions:
     return prompt
 
 
+def _sanitize_json(text: str) -> str:
+    """Fix common LLM JSON formatting issues: trailing commas, trailing
+    colons/commas before closing braces, and stray text inside values."""
+    # Remove trailing commas before } or ]
+    text = re.sub(r",\s*([}\]])", r"\1", text)
+    # Remove trailing colons before } (e.g. "key": })
+    text = re.sub(r":\s*([}])", r"\1", text)
+    return text
+
+
 def _extract_json(raw_response: str) -> dict:
     """
     Try to parse the LLM's raw response as JSON. LLMs sometimes wrap
@@ -84,15 +94,24 @@ def _extract_json(raw_response: str) -> dict:
 
     match = re.search(r"\{.*\}", text, re.DOTALL)
     if match:
-        return json.loads(match.group(0))
+        candidate = match.group(0)
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            pass
+        sanitized = _sanitize_json(candidate)
+        try:
+            return json.loads(sanitized)
+        except json.JSONDecodeError:
+            pass
 
     raise ValueError("No JSON object found in LLM response")
 
 
-def _call_ollama(prompt: str) -> str:
+def _call_ollama(prompt: str, temperature: float = 0.5) -> str:
     response = requests.post(
         f"{settings.OLLAMA_HOST}/api/generate",
-        json={"model": settings.OLLAMA_MODEL, "prompt": prompt, "stream": False},
+        json={"model": settings.OLLAMA_MODEL, "prompt": prompt, "stream": False, "options": {"temperature": temperature}},
         timeout=120,
     )
     response.raise_for_status()
@@ -110,14 +129,14 @@ def _call_openai(prompt: str) -> str:
     return completion.choices[0].message.content
 
 
-def call_llm(prompt: str) -> str:
+def call_llm(prompt: str, temperature: float = 0.5) -> str:
     """Dispatch to the configured LLM provider."""
     if settings.LLM_PROVIDER == "openai":
         return _call_openai(prompt)
-    return _call_ollama(prompt)
+    return _call_ollama(prompt, temperature)
 
 
-def grade_with_llm(prompt: str) -> dict:
+def grade_with_llm(prompt: str, temperature: float = 0.5) -> dict:
     """
     Call the LLM and parse its JSON response, re-prompting once if
     parsing fails. Raises LLMGradingError if it still fails after retry
@@ -126,7 +145,7 @@ def grade_with_llm(prompt: str) -> dict:
     last_error = None
     for attempt in range(2):
         try:
-            raw_response = call_llm(prompt)
+            raw_response = call_llm(prompt, temperature)
             parsed = _extract_json(raw_response)
 
             if "marks" not in parsed or "feedback" not in parsed:

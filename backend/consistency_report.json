@@ -1,0 +1,739 @@
+{
+  "n_total": 23,
+  "ocr": {
+    "mean_confidence": 92.2
+  },
+  "retrieval": {
+    "mean_similarity": 0.241
+  },
+  "grading_validity": {
+    "score_validity_rate_pct": 100.0
+  },
+  "accuracy_regression": null,
+  "pass_fail_classification": null,
+  "grade_band_classification": null,
+  "flag_breakdown": {
+    "low_similarity": 2,
+    "off_topic": 2,
+    "low_ocr_confidence": 1
+  },
+  "score_similarity_correlation": {
+    "n": 20,
+    "pearson_r": -0.713,
+    "interpretation": "weak/no correlation: grading may not be using retrieved context meaningfully"
+  },
+  "self_consistency": {
+    "0.3": {
+      "summary": {
+        "n_items": 15,
+        "n_successful_items": 15,
+        "n_failed_items": 0,
+        "n_runs": 10,
+        "mean_std": 0.089,
+        "mean_spread_pct": 5.3,
+        "stability": "moderate variance, consider lowering temperature"
+      },
+      "items": [
+        {
+          "result_id": 106,
+          "question_id": 24,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.5,
+          "std_dev": 0.0,
+          "spread": 0.0,
+          "spread_pct": 0.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 6,
+          "question_id": 3,
+          "total_marks": 5.0,
+          "original_marks": 4.0,
+          "mean_marks": 4.35,
+          "std_dev": 0.229,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 112,
+          "question_id": 21,
+          "total_marks": 4.0,
+          "original_marks": 4.0,
+          "mean_marks": 4.0,
+          "std_dev": 0.0,
+          "spread": 0.0,
+          "spread_pct": 0.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 54,
+          "question_id": 18,
+          "total_marks": 5.0,
+          "original_marks": 3.5,
+          "mean_marks": 4.26,
+          "std_dev": 0.229,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 45,
+          "question_id": 17,
+          "total_marks": 5.0,
+          "original_marks": 0.0,
+          "mean_marks": 4.23,
+          "std_dev": 0.09,
+          "spread": 0.3,
+          "spread_pct": 6.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 99,
+          "question_id": 20,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.5,
+          "std_dev": 0.0,
+          "spread": 0.0,
+          "spread_pct": 0.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 9,
+          "question_id": 5,
+          "total_marks": 5.0,
+          "original_marks": 4.0,
+          "mean_marks": 4.34,
+          "std_dev": 0.15,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 107,
+          "question_id": 20,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.5,
+          "std_dev": 0.0,
+          "spread": 0.0,
+          "spread_pct": 0.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 56,
+          "question_id": 19,
+          "total_marks": 4.0,
+          "original_marks": null,
+          "mean_marks": 2.95,
+          "std_dev": 0.304,
+          "spread": 0.7,
+          "spread_pct": 17.5,
+          "n_successful": 10
+        },
+        {
+          "result_id": 92,
+          "question_id": 19,
+          "total_marks": 4.0,
+          "original_marks": 1.0,
+          "mean_marks": 2.0,
+          "std_dev": 0.0,
+          "spread": 0.0,
+          "spread_pct": 0.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 105,
+          "question_id": 24,
+          "total_marks": 5.0,
+          "original_marks": 0.0,
+          "mean_marks": 4.5,
+          "std_dev": 0.0,
+          "spread": 0.0,
+          "spread_pct": 0.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 4,
+          "question_id": 3,
+          "total_marks": 5.0,
+          "original_marks": 4.0,
+          "mean_marks": 4.0,
+          "std_dev": 0.0,
+          "spread": 0.0,
+          "spread_pct": 0.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 55,
+          "question_id": 18,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.48,
+          "std_dev": 0.183,
+          "spread": 0.8,
+          "spread_pct": 16.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 44,
+          "question_id": 16,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.5,
+          "std_dev": 0.0,
+          "spread": 0.0,
+          "spread_pct": 0.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 108,
+          "question_id": 20,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.45,
+          "std_dev": 0.15,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        }
+      ]
+    },
+    "0.5": {
+      "summary": {
+        "n_items": 15,
+        "n_successful_items": 15,
+        "n_failed_items": 0,
+        "n_runs": 10,
+        "mean_std": 0.178,
+        "mean_spread_pct": 10.7,
+        "stability": "moderate variance, consider lowering temperature"
+      },
+      "items": [
+        {
+          "result_id": 106,
+          "question_id": 24,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.63,
+          "std_dev": 0.205,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 6,
+          "question_id": 3,
+          "total_marks": 5.0,
+          "original_marks": 4.0,
+          "mean_marks": 4.35,
+          "std_dev": 0.229,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 112,
+          "question_id": 21,
+          "total_marks": 4.0,
+          "original_marks": 4.0,
+          "mean_marks": 4.0,
+          "std_dev": 0.0,
+          "spread": 0.0,
+          "spread_pct": 0.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 54,
+          "question_id": 18,
+          "total_marks": 5.0,
+          "original_marks": 3.5,
+          "mean_marks": 4.25,
+          "std_dev": 0.25,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 45,
+          "question_id": 17,
+          "total_marks": 5.0,
+          "original_marks": 0.0,
+          "mean_marks": 4.24,
+          "std_dev": 0.143,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 99,
+          "question_id": 20,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.4,
+          "std_dev": 0.2,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 9,
+          "question_id": 5,
+          "total_marks": 5.0,
+          "original_marks": 4.0,
+          "mean_marks": 4.37,
+          "std_dev": 0.127,
+          "spread": 0.4,
+          "spread_pct": 8.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 107,
+          "question_id": 20,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.39,
+          "std_dev": 0.197,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 56,
+          "question_id": 19,
+          "total_marks": 4.0,
+          "original_marks": null,
+          "mean_marks": 2.74,
+          "std_dev": 0.314,
+          "spread": 0.7,
+          "spread_pct": 17.5,
+          "n_successful": 10
+        },
+        {
+          "result_id": 92,
+          "question_id": 19,
+          "total_marks": 4.0,
+          "original_marks": 1.0,
+          "mean_marks": 2.1,
+          "std_dev": 0.2,
+          "spread": 0.5,
+          "spread_pct": 12.5,
+          "n_successful": 10
+        },
+        {
+          "result_id": 105,
+          "question_id": 24,
+          "total_marks": 5.0,
+          "original_marks": 0.0,
+          "mean_marks": 4.55,
+          "std_dev": 0.15,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 4,
+          "question_id": 3,
+          "total_marks": 5.0,
+          "original_marks": 4.0,
+          "mean_marks": 4.0,
+          "std_dev": 0.224,
+          "spread": 1.0,
+          "spread_pct": 20.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 55,
+          "question_id": 18,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.5,
+          "std_dev": 0.224,
+          "spread": 1.0,
+          "spread_pct": 20.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 44,
+          "question_id": 16,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.56,
+          "std_dev": 0.12,
+          "spread": 0.3,
+          "spread_pct": 6.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 108,
+          "question_id": 20,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.53,
+          "std_dev": 0.09,
+          "spread": 0.3,
+          "spread_pct": 6.0,
+          "n_successful": 10
+        }
+      ]
+    },
+    "0.7": {
+      "summary": {
+        "n_items": 15,
+        "n_successful_items": 15,
+        "n_failed_items": 0,
+        "n_runs": 10,
+        "mean_std": 0.2,
+        "mean_spread_pct": 13.0,
+        "stability": "moderate variance, consider lowering temperature"
+      },
+      "items": [
+        {
+          "result_id": 106,
+          "question_id": 24,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.65,
+          "std_dev": 0.229,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 6,
+          "question_id": 3,
+          "total_marks": 5.0,
+          "original_marks": 4.0,
+          "mean_marks": 4.17,
+          "std_dev": 0.265,
+          "spread": 0.7,
+          "spread_pct": 14.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 112,
+          "question_id": 21,
+          "total_marks": 4.0,
+          "original_marks": 4.0,
+          "mean_marks": 4.0,
+          "std_dev": 0.0,
+          "spread": 0.0,
+          "spread_pct": 0.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 54,
+          "question_id": 18,
+          "total_marks": 5.0,
+          "original_marks": 3.5,
+          "mean_marks": 4.3,
+          "std_dev": 0.249,
+          "spread": 0.6,
+          "spread_pct": 12.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 45,
+          "question_id": 17,
+          "total_marks": 5.0,
+          "original_marks": 0.0,
+          "mean_marks": 4.36,
+          "std_dev": 0.136,
+          "spread": 0.3,
+          "spread_pct": 6.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 99,
+          "question_id": 20,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.37,
+          "std_dev": 0.205,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 9,
+          "question_id": 5,
+          "total_marks": 5.0,
+          "original_marks": 4.0,
+          "mean_marks": 4.45,
+          "std_dev": 0.067,
+          "spread": 0.2,
+          "spread_pct": 4.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 107,
+          "question_id": 20,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.37,
+          "std_dev": 0.205,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 56,
+          "question_id": 19,
+          "total_marks": 4.0,
+          "original_marks": null,
+          "mean_marks": 2.79,
+          "std_dev": 0.383,
+          "spread": 1.2,
+          "spread_pct": 30.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 92,
+          "question_id": 19,
+          "total_marks": 4.0,
+          "original_marks": 1.0,
+          "mean_marks": 2.15,
+          "std_dev": 0.32,
+          "spread": 1.0,
+          "spread_pct": 25.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 105,
+          "question_id": 24,
+          "total_marks": 5.0,
+          "original_marks": 0.0,
+          "mean_marks": 4.5,
+          "std_dev": 0.224,
+          "spread": 1.0,
+          "spread_pct": 20.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 4,
+          "question_id": 3,
+          "total_marks": 5.0,
+          "original_marks": 4.0,
+          "mean_marks": 4.0,
+          "std_dev": 0.224,
+          "spread": 1.0,
+          "spread_pct": 20.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 55,
+          "question_id": 18,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.56,
+          "std_dev": 0.185,
+          "spread": 0.6,
+          "spread_pct": 12.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 44,
+          "question_id": 16,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.48,
+          "std_dev": 0.183,
+          "spread": 0.8,
+          "spread_pct": 16.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 108,
+          "question_id": 20,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.56,
+          "std_dev": 0.12,
+          "spread": 0.3,
+          "spread_pct": 6.0,
+          "n_successful": 10
+        }
+      ]
+    },
+    "0.9": {
+      "summary": {
+        "n_items": 15,
+        "n_successful_items": 15,
+        "n_failed_items": 0,
+        "n_runs": 10,
+        "mean_std": 0.215,
+        "mean_spread_pct": 12.7,
+        "stability": "moderate variance, consider lowering temperature"
+      },
+      "items": [
+        {
+          "result_id": 106,
+          "question_id": 24,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.6,
+          "std_dev": 0.2,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 6,
+          "question_id": 3,
+          "total_marks": 5.0,
+          "original_marks": 4.0,
+          "mean_marks": 4.283,
+          "std_dev": 0.236,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 112,
+          "question_id": 21,
+          "total_marks": 4.0,
+          "original_marks": 4.0,
+          "mean_marks": 4.0,
+          "std_dev": 0.0,
+          "spread": 0.0,
+          "spread_pct": 0.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 54,
+          "question_id": 18,
+          "total_marks": 5.0,
+          "original_marks": 3.5,
+          "mean_marks": 4.3,
+          "std_dev": 0.214,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 45,
+          "question_id": 17,
+          "total_marks": 5.0,
+          "original_marks": 0.0,
+          "mean_marks": 4.36,
+          "std_dev": 0.229,
+          "spread": 0.6,
+          "spread_pct": 12.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 99,
+          "question_id": 20,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.34,
+          "std_dev": 0.224,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 9,
+          "question_id": 5,
+          "total_marks": 5.0,
+          "original_marks": 4.0,
+          "mean_marks": 4.46,
+          "std_dev": 0.143,
+          "spread": 0.4,
+          "spread_pct": 8.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 107,
+          "question_id": 20,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.4,
+          "std_dev": 0.241,
+          "spread": 0.8,
+          "spread_pct": 16.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 56,
+          "question_id": 19,
+          "total_marks": 4.0,
+          "original_marks": null,
+          "mean_marks": 3.01,
+          "std_dev": 0.423,
+          "spread": 1.1,
+          "spread_pct": 27.5,
+          "n_successful": 10
+        },
+        {
+          "result_id": 92,
+          "question_id": 19,
+          "total_marks": 4.0,
+          "original_marks": 1.0,
+          "mean_marks": 2.15,
+          "std_dev": 0.32,
+          "spread": 1.0,
+          "spread_pct": 25.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 105,
+          "question_id": 24,
+          "total_marks": 5.0,
+          "original_marks": 0.0,
+          "mean_marks": 4.45,
+          "std_dev": 0.269,
+          "spread": 1.0,
+          "spread_pct": 20.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 4,
+          "question_id": 3,
+          "total_marks": 5.0,
+          "original_marks": 4.0,
+          "mean_marks": 3.95,
+          "std_dev": 0.15,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 55,
+          "question_id": 18,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.47,
+          "std_dev": 0.261,
+          "spread": 0.8,
+          "spread_pct": 16.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 44,
+          "question_id": 16,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.43,
+          "std_dev": 0.119,
+          "spread": 0.3,
+          "spread_pct": 6.0,
+          "n_successful": 10
+        },
+        {
+          "result_id": 108,
+          "question_id": 20,
+          "total_marks": 5.0,
+          "original_marks": 5.0,
+          "mean_marks": 4.39,
+          "std_dev": 0.197,
+          "spread": 0.5,
+          "spread_pct": 10.0,
+          "n_successful": 10
+        }
+      ]
+    }
+  }
+}

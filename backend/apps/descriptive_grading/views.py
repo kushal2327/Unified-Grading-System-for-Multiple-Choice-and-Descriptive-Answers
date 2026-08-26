@@ -9,6 +9,7 @@ from apps.authentication.permissions import IsTeacher, IsStudent
 from .models import TeacherMaterial, Exam, Question, Submission, DescriptiveResult
 from .pipeline.material_ingestion import process_teacher_material
 from .pipeline.grading_pipeline import grade_submission
+from .pipeline.rag import get_question_relevant_chunks
 from .pipeline.vision_ocr import VisionOCRError, check_ollama_status
 from .pipeline.vector_store import get_chunks_for_material
 from .serializers import (
@@ -31,9 +32,10 @@ def _delete_results_with_files(results):
     from django.core.files.storage import default_storage
 
     for result in results:
-        if result.answer_sheet and result.answer_sheet.name:
+        sheets = result.answer_sheet or []
+        for path in sheets:
             try:
-                default_storage.delete(result.answer_sheet.name)
+                default_storage.delete(path)
             except Exception:
                 logger.exception("Failed to delete answer sheet media for result=%s", result.id)
     results.delete()
@@ -140,10 +142,10 @@ class ExamUpdateView(generics.RetrieveUpdateDestroyAPIView):
 class StudentSubmitAnswerView(APIView):
     """
     POST /api/student/submit-answer
-    Body (multipart/form-data): exam_id, question_id, image_file
+    Body (multipart/form-data): exam_id, question_id, image_file (one or more)
 
     Creates (or reuses) the student's Submission for this exam, then
-    runs the full grading pipeline synchronously for the uploaded image:
+    runs the full grading pipeline for each uploaded image:
     preprocess -> OCR -> RAG -> LLM grading -> save DescriptiveResult.
     """
     permission_classes = [permissions.IsAuthenticated, IsStudent]
@@ -154,7 +156,13 @@ class StudentSubmitAnswerView(APIView):
         serializer.is_valid(raise_exception=True)
         exam = serializer.validated_data["exam"]
         question = serializer.validated_data["question"]
-        image_file = serializer.validated_data["image_file"]
+
+        image_files = request.FILES.getlist("image_file")
+        if not image_files:
+            return Response(
+                {"error": "At least one image_file is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         submission, _ = Submission.objects.get_or_create(
             student=request.user,
@@ -162,23 +170,25 @@ class StudentSubmitAnswerView(APIView):
             defaults={"status": "pending"},
         )
 
-        # Save the uploaded image to media/ so the pipeline (and any
-        # later manual review) can reference it by path.
         import os
         from django.core.files.storage import default_storage
 
-        save_path = f"answer_sheets/sub{submission.id}_q{question.id}_{image_file.name}"
-        saved_name = default_storage.save(save_path, image_file)
-        full_path = default_storage.path(saved_name)
+        # Save all uploaded images
+        saved_paths = []
+        for image_file in image_files:
+            save_path = f"answer_sheets/sub{submission.id}_q{question.id}_{image_file.name}"
+            saved_name = default_storage.save(save_path, image_file)
+            saved_paths.append(saved_name)
 
         # Re-submitting a question replaces the student's previous upload
-        # (and any manual review entries linked to it).
         _delete_results_with_files(
             DescriptiveResult.objects.filter(submission=submission, question=question)
         )
 
+        # Run grading pipeline on first image (pipeline handles OCR + LLM)
+        first_full_path = default_storage.path(saved_paths[0])
         try:
-            result = grade_submission(submission, question, full_path)
+            result = grade_submission(submission, question, first_full_path)
         except VisionOCRError as exc:
             logger.error("Vision OCR failed for submission=%s question=%s: %s",
                          submission.id, question.id, exc)
@@ -194,7 +204,23 @@ class StudentSubmitAnswerView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        result.answer_sheet = saved_name
+        # If multiple images, run OCR on additional images and append text
+        if len(saved_paths) > 1:
+            from .pipeline.vision_ocr import extract_and_clean
+            extra_texts = []
+            for path in saved_paths[1:]:
+                full_path = default_storage.path(path)
+                try:
+                    ocr = extract_and_clean(full_path)
+                    extra_texts.append(ocr["cleaned_text"])
+                except Exception:
+                    logger.warning("OCR failed for extra image %s", path)
+            if extra_texts:
+                combined = result.ocr_cleaned_text + "\n\n---\n\n".join(extra_texts)
+                result.ocr_cleaned_text = combined
+                result.save(update_fields=["ocr_cleaned_text"])
+
+        result.answer_sheet = saved_paths
         result.save(update_fields=["answer_sheet"])
 
         return Response(
@@ -354,3 +380,39 @@ class VisionModelStatusView(APIView):
     def get(self, request):
         status_info = check_ollama_status()
         return Response(status_info)
+
+
+class QuestionRelevantChunksView(APIView):
+    """
+    GET /api/teacher/exams/{exam_id}/questions/{question_id}/chunks
+
+    Returns the relevant chunks from the teacher's uploaded materials
+    that match this question via cosine similarity. Allows the teacher
+    to preview which parts of their PDF will be used as reference
+    material when the LLM grades student answers for this question.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsTeacher]
+
+    def get(self, request, exam_id, question_id):
+        try:
+            exam = Exam.objects.get(id=exam_id, teacher=request.user)
+        except Exam.DoesNotExist:
+            return Response({"detail": "Exam not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            question = Question.objects.get(id=question_id, exam=exam)
+        except Question.DoesNotExist:
+            return Response({"detail": "Question not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        rag_result = get_question_relevant_chunks(
+            question.question_text, exam.subject
+        )
+
+        return Response({
+            "question_id": question.id,
+            "question_text": question.question_text,
+            "subject": exam.subject,
+            "similarity_score": rag_result["similarity_score"],
+            "num_chunks": len(rag_result["chunks"]),
+            "chunks": rag_result["chunks"],
+        })

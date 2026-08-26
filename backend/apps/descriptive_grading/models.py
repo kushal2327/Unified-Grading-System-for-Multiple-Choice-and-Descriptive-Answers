@@ -94,9 +94,9 @@ class DescriptiveResult(models.Model):
     submission = models.ForeignKey(Submission, on_delete=models.CASCADE, related_name="results")
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="results")
 
-    answer_sheet = models.ImageField(
-        upload_to="answer_sheets/", null=True, blank=True,
-        help_text="The answer sheet image the student uploaded for this answer.",
+    answer_sheet = models.JSONField(
+        default=list, blank=True,
+        help_text="List of uploaded answer sheet image paths.",
     )
 
     ocr_raw_text = models.TextField(blank=True, null=True)

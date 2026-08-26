@@ -125,6 +125,7 @@ export const teacherAPI = {
   reviewQueue: () => teacherApi.get("/teacher/review-queue"),
   reviewOverride: (resultId, payload) => teacherApi.post(`/teacher/review/${resultId}`, payload),
   materialChunks: (materialId) => teacherApi.get(`/teacher/materials/${materialId}/chunks`),
+  questionChunks: (examId, questionId) => teacherApi.get(`/teacher/exams/${examId}/questions/${questionId}/chunks`),
   visionStatus: () => teacherApi.get("/teacher/vision-status"),
 };
 

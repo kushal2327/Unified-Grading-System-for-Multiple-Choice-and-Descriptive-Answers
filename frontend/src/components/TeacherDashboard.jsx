@@ -3,6 +3,10 @@ import { teacherAPI } from "../services/api";
 import MaterialsList from "./MaterialsList";
 import EditExamCard from "./EditExamCard";
 
+const MEDIA_ORIGIN = new URL(
+  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api"
+).origin;
+
 function VisionStatusBadge() {
   const [status, setStatus] = useState(null);
   const [checking, setChecking] = useState(true);
@@ -303,9 +307,36 @@ function CreateExamCard({ onCreated }) {
 function ExamsAndResults({ exams, onSelectExam, selectedExamId, submissions, onEditExam, onDeleteExam }) {
   const [expandedId, setExpandedId] = useState(null);
   const [expandedQuestionsId, setExpandedQuestionsId] = useState(null);
+  const [visibleChunksResultId, setVisibleChunksResultId] = useState(null);
+  const [questionChunksExamId, setQuestionChunksExamId] = useState(null);
+  const [questionChunksQuestionId, setQuestionChunksQuestionId] = useState(null);
+  const [questionChunksData, setQuestionChunksData] = useState(null);
+  const [questionChunksLoading, setQuestionChunksLoading] = useState(false);
 
   const toggle = (id) => setExpandedId(expandedId === id ? null : id);
   const toggleQuestions = (id) => setExpandedQuestionsId(expandedQuestionsId === id ? null : id);
+  const toggleChunks = (id) => setVisibleChunksResultId(visibleChunksResultId === id ? null : id);
+
+  const loadQuestionChunks = async (examId, questionId) => {
+    if (questionChunksExamId === examId && questionChunksQuestionId === questionId) {
+      setQuestionChunksExamId(null);
+      setQuestionChunksQuestionId(null);
+      setQuestionChunksData(null);
+      return;
+    }
+    setQuestionChunksExamId(examId);
+    setQuestionChunksQuestionId(questionId);
+    setQuestionChunksLoading(true);
+    setQuestionChunksData(null);
+    try {
+      const { data } = await teacherAPI.questionChunks(examId, questionId);
+      setQuestionChunksData(data);
+    } catch {
+      setQuestionChunksData({ chunks: [], error: "Failed to load chunks." });
+    } finally {
+      setQuestionChunksLoading(false);
+    }
+  };
 
   return (
     <div className="card">
@@ -357,6 +388,57 @@ function ExamsAndResults({ exams, onSelectExam, selectedExamId, submissions, onE
                   </div>
                   <p style={{ margin: "0 0 0.4rem", whiteSpace: "pre-wrap" }}>{q.question_text}</p>
                   <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}><strong>Rubric:</strong> {q.rubric}</p>
+                  <div style={{ marginTop: "0.6rem" }}>
+                    <button
+                      className="btn btn-outline"
+                      style={{ fontSize: "0.8rem", padding: "0.25em 0.7em" }}
+                      onClick={() => loadQuestionChunks(exam.id, q.id)}
+                    >
+                      {questionChunksExamId === exam.id && questionChunksQuestionId === q.id ? "Hide relevant chunks" : "View relevant chunks"}
+                    </button>
+                    {questionChunksExamId === exam.id && questionChunksQuestionId === q.id && (
+                      <div style={{ marginTop: "0.5rem", padding: "0.65rem", background: "#eef4ff", border: "1px solid #c5d5f5", borderRadius: "var(--radius)" }}>
+                        {questionChunksLoading && <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>Loading chunks...</p>}
+                        {!questionChunksLoading && questionChunksData && (
+                          <>
+                            {questionChunksData.error ? (
+                              <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>{questionChunksData.error}</p>
+                            ) : (
+                              <>
+                                <p className="muted" style={{ margin: "0 0 0.4rem", fontSize: "0.78rem" }}>
+                                  <strong>Source:</strong> Extracted from your uploaded PDF · {questionChunksData.num_chunks} relevant chunk{questionChunksData.num_chunks !== 1 ? "s" : ""} · Best similarity: {(questionChunksData.similarity_score * 100).toFixed(1)}%
+                                </p>
+                                {questionChunksData.chunks?.length > 0 ? (
+                                  questionChunksData.chunks.map((chunk, ci) => (
+                                    <div key={ci} className="card" style={{ marginBottom: "0.5rem", background: "#fbf8f1" }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "0 0 0.3em" }}>
+                                        <p className="muted" style={{ margin: 0, fontSize: "0.75rem" }}>
+                                          Chunk {chunk.chunk_index ?? ci}
+                                        </p>
+                                        <span style={{
+                                          fontSize: "0.7rem",
+                                          padding: "0.15em 0.5em",
+                                          borderRadius: "4px",
+                                          background: chunk.overlap_pct === 0 ? "#e8f5e9" : "#fff3e0",
+                                          color: chunk.overlap_pct === 0 ? "#2e7d32" : "#e65100",
+                                          fontWeight: 600,
+                                        }}>
+                                          {chunk.overlap_pct === 0 ? "New paragraph" : `${chunk.overlap_pct}% overlap`}
+                                        </span>
+                                      </div>
+                                      <p style={{ margin: 0, fontSize: "0.88rem" }}>{chunk.text}</p>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>No relevant chunks found for this question.</p>
+                                )}
+                              </>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -403,6 +485,14 @@ function ExamsAndResults({ exams, onSelectExam, selectedExamId, submissions, onE
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <span className="muted" style={{ fontSize: "0.78rem" }}>Q{r.question}:</span>{" "}
                             <strong style={{ whiteSpace: "pre-wrap" }}>{questionMap[r.question] || `Question #${r.question}`}</strong>
+                            {r.created_at && (
+                              <span className="muted" style={{ marginLeft: "0.6rem", fontSize: "0.75rem" }}>
+                                Uploaded: {new Date(r.created_at).toLocaleString(undefined, {
+                                  year: "numeric", month: "short", day: "numeric",
+                                  hour: "numeric", minute: "2-digit",
+                                })}
+                              </span>
+                            )}
                           </div>
                           <span style={{ marginLeft: "0.75rem", whiteSpace: "nowrap" }}>
                             <strong>{r.marks_awarded ?? "—"}</strong> / {r.total_marks}
@@ -418,10 +508,7 @@ function ExamsAndResults({ exams, onSelectExam, selectedExamId, submissions, onE
                             <span className="muted">OCR confidence:</span>{" "}
                             {r.ocr_confidence != null ? `${r.ocr_confidence.toFixed(1)}%` : "—"}
                           </div>
-                          <div>
-                            <span className="muted">Similarity:</span>{" "}
-                            {r.similarity_score != null ? r.similarity_score.toFixed(2) : "—"}
-                          </div>
+
                         </div>
                         {r.ocr_cleaned_text && (
                           <details style={{ marginTop: "0.5rem" }}>
@@ -433,21 +520,58 @@ function ExamsAndResults({ exams, onSelectExam, selectedExamId, submissions, onE
                             </pre>
                           </details>
                         )}
-                        {r.retrieved_chunks?.length > 0 && (
-                          <details style={{ marginTop: "0.5rem" }}>
-                            <summary style={{ cursor: "pointer", fontSize: "0.82rem", color: "var(--ink-blue)" }}>
-                              Extracted chunks ({r.retrieved_chunks.length})
-                            </summary>
-                            <div style={{ margin: "0.4rem 0 0", maxHeight: "8em", overflow: "auto" }}>
-                              {r.retrieved_chunks.map((chunk, i) => (
-                                <pre key={i} style={{ margin: "0 0 0.5rem", padding: "0.6rem", background: "#fff", border: "1px solid var(--paper-line)", borderRadius: "var(--radius)", fontSize: "0.8rem", whiteSpace: "pre-wrap" }}>
-                                  <span style={{ fontWeight: 700, color: "var(--ink-soft)" }}>Chunk {i + 1}:</span>{" "}
-                                  {typeof chunk === "string" ? chunk : chunk.text || JSON.stringify(chunk)}
-                                </pre>
-                              ))}
+                        <div style={{ marginTop: "0.5rem" }}>
+                          <button
+                            className="btn btn-outline"
+                            style={{ fontSize: "0.8rem", padding: "0.25em 0.7em" }}
+                            onClick={() => toggleChunks(r.id)}
+                          >
+                            {visibleChunksResultId === r.id ? "Hide extracted chunks" : "View extracted chunks"}
+                          </button>
+                          {r.retrieved_chunks?.length > 0 && (
+                            <span className="muted" style={{ marginLeft: "0.4rem", fontSize: "0.75rem" }}>
+                              ({r.retrieved_chunks.length} chunk{r.retrieved_chunks.length > 1 ? "s" : ""} from your PDF)
+                            </span>
+                          )}
+                          {visibleChunksResultId === r.id && (
+                            <div style={{ marginTop: "0.5rem", maxHeight: "16em", overflow: "auto", padding: "0.65rem", background: "#eef4ff", border: "1px solid #c5d5f5", borderRadius: "var(--radius)" }}>
+                              <p className="muted" style={{ margin: "0 0 0.5rem", fontSize: "0.75rem", fontWeight: 600 }}>
+                                Extracted from your uploaded reference PDF (not AI-generated)
+                              </p>
+                              {r.retrieved_chunks?.length > 0 ? (
+                                r.retrieved_chunks.map((chunk, i) => {
+                                  const text = typeof chunk === "string" ? chunk : chunk.text || JSON.stringify(chunk);
+                                  const chunkIndex = typeof chunk === "object" && chunk.chunk_index != null ? chunk.chunk_index : i;
+                                  const overlapPct = typeof chunk === "object" && chunk.overlap_pct != null ? chunk.overlap_pct : 0;
+                                  return (
+                                    <div key={i} className="card" style={{ marginBottom: "0.5rem", background: "#fbf8f1" }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "0 0 0.3em" }}>
+                                        <p className="muted" style={{ margin: 0, fontSize: "0.75rem" }}>
+                                          Chunk {chunkIndex}
+                                        </p>
+                                        <span style={{
+                                          fontSize: "0.7rem",
+                                          padding: "0.15em 0.5em",
+                                          borderRadius: "4px",
+                                          background: overlapPct === 0 ? "#e8f5e9" : "#fff3e0",
+                                          color: overlapPct === 0 ? "#2e7d32" : "#e65100",
+                                          fontWeight: 600,
+                                        }}>
+                                          {overlapPct === 0 ? "New paragraph" : `${overlapPct}% overlap`}
+                                        </span>
+                                      </div>
+                                      <p style={{ margin: 0, fontSize: "0.88rem" }}>{text}</p>
+                                    </div>
+                                  );
+                                })
+                              ) : (
+                                <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
+                                  No relevant reference chunks were retrieved for this answer.
+                                </p>
+                              )}
                             </div>
-                          </details>
-                        )}
+                          )}
+                        </div>
                         {r.feedback && (
                           <div style={{ marginTop: "0.5rem", padding: "0.5rem", background: "#fff", border: "1px solid var(--paper-line)", borderRadius: "var(--radius)", fontSize: "0.85rem" }}>
                             <strong style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}>Feedback:</strong>
@@ -538,9 +662,24 @@ function ReviewQueueCard({ queue, onReviewed }) {
           </p>
 
           <p style={{ marginBottom: "0.3em" }}><strong>OCR text:</strong> {item.result.ocr_cleaned_text || "(none)"}</p>
+          {Array.isArray(item.result.answer_sheet) && item.result.answer_sheet.length > 0 && (
+            <p style={{ marginBottom: "0.3em", display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+              {item.result.answer_sheet.map((path, idx) => (
+                <a
+                  key={idx}
+                  className="btn btn-outline"
+                  href={path.startsWith("http") ? path : `${MEDIA_ORIGIN}/media/${path}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: "0.85rem" }}
+                >
+                  View image {item.result.answer_sheet.length > 1 ? idx + 1 : ""}
+                </a>
+              ))}
+            </p>
+          )}
           <p className="muted" style={{ margin: 0 }}>
             Confidence: {item.result.ocr_confidence?.toFixed(1) ?? "—"}%
-            {" · "}Similarity: {item.result.similarity_score?.toFixed(2) ?? "n/a"}
             {" · "}Marks so far: {item.result.marks_awarded ?? "—"} / {item.result.total_marks}
           </p>
 

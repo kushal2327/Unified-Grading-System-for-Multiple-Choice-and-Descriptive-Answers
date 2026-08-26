@@ -95,7 +95,7 @@ function QuestionBrowser({ onPick }) {
 export default function StudentDashboard() {
   const [examId, setExamId] = useState("");
   const [questionId, setQuestionId] = useState("");
-  const [imageFile, setImageFile] = useState(null);
+  const [imageFiles, setImageFiles] = useState([]);
   const [status, setStatus] = useState(null);
   const [submissionResult, setSubmissionResult] = useState(null);
 
@@ -114,18 +114,21 @@ export default function StudentDashboard() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!imageFile) return;
+    if (!imageFiles.length) return;
     setStatus({ type: "loading", message: "Grading in progress — this runs OCR and AI grading, may take a moment..." });
     setSubmissionResult(null);
 
     const formData = new FormData();
     formData.append("exam_id", examId);
     formData.append("question_id", questionId);
-    formData.append("image_file", imageFile);
+    for (const file of imageFiles) {
+      formData.append("image_file", file);
+    }
 
     try {
       const { data } = await studentAPI.submitAnswer(formData);
       setSubmissionResult(data.result);
+      setImageFiles([]);
       setStatus({ type: "success", message: "Submitted and graded." });
     } catch (err) {
       setStatus({
@@ -194,9 +197,39 @@ export default function StudentDashboard() {
             </div>
           </div>
           <div className="field">
-            <label htmlFor="image_file">Answer sheet photo</label>
-            <input id="image_file" type="file" accept="image/*" required
-              onChange={(e) => setImageFile(e.target.files[0])} />
+            <label>Answer sheet photo(s)</label>
+            <label
+              htmlFor="image_file"
+              className="btn btn-outline"
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", cursor: "pointer", marginBottom: "0.4rem" }}
+            >
+              {imageFiles.length === 0
+                ? "Choose files"
+                : `${imageFiles.length} file${imageFiles.length > 1 ? "s" : ""} chosen`}
+            </label>
+            <input id="image_file" type="file" accept="image/*" multiple style={{ display: "none" }}
+              onChange={(e) => {
+                const newFiles = Array.from(e.target.files);
+                setImageFiles((prev) => {
+                  const existingNames = new Set(prev.map((f) => f.name));
+                  const unique = newFiles.filter((f) => !existingNames.has(f.name));
+                  return [...prev, ...unique];
+                });
+                e.target.value = "";
+              }} />
+            {imageFiles.length > 0 && (
+              <ul className="muted" style={{ margin: "0.3rem 0 0", fontSize: "0.85rem", paddingLeft: "1.2rem" }}>
+                {imageFiles.map((f, i) => (
+                  <li key={i} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                    {f.name}
+                    <button type="button" style={{ background: "none", border: "none", color: "#c0392b", cursor: "pointer", fontSize: "0.8rem" }}
+                      onClick={() => setImageFiles((prev) => prev.filter((_, j) => j !== i))}>
+                      remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           <button className="btn btn-primary" type="submit" disabled={status?.type === "loading"}>
             {status?.type === "loading" ? "Grading..." : "Submit answer"}
@@ -254,9 +287,14 @@ export default function StudentDashboard() {
             <div key={r.id} style={{ marginBottom: "1rem" }}>
               <ResultViewer result={r} />
               {canEditResults && (
-                <div style={{ marginTop: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  {r.answer_sheet && (
-                    <a className="btn btn-outline" href={`${MEDIA_ORIGIN}${r.answer_sheet}`} target="_blank" rel="noreferrer">
+                <div style={{ marginTop: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                  {Array.isArray(r.answer_sheet) && r.answer_sheet.length > 0 && r.answer_sheet.map((path, idx) => (
+                    <a key={idx} className="btn btn-outline" href={`${MEDIA_ORIGIN}/media/${path}`} target="_blank" rel="noreferrer">
+                      View image {r.answer_sheet.length > 1 ? idx + 1 : ""}
+                    </a>
+                  ))}
+                  {!Array.isArray(r.answer_sheet) && r.answer_sheet && (
+                    <a className="btn btn-outline" href={`${MEDIA_ORIGIN}/media/${r.answer_sheet}`} target="_blank" rel="noreferrer">
                       View uploaded sheet
                     </a>
                   )}
