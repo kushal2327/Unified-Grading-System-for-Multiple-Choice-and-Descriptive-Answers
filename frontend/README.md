@@ -1,16 +1,29 @@
-# React + Vite
+# Frontend — React + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Single-page application for the grading system, served as static files in production.
 
-Currently, two official plugins are available:
+## Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev       # Vite dev server on http://localhost:3000
+npm run build     # Output to dist/
+npm run lint      # Oxlint
+npm run preview   # Preview production build
+```
 
-## React Compiler
+## Tech
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19, React Router v7, Axios
+- Vite 5 with `@vitejs/plugin-react`
+- Oxlint for linting
 
-## Expanding the Oxlint configuration
+## Role-Based Routes
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+| Route | Role | Description |
+|-------|------|-------------|
+| `/login` | All | Login page |
+| `/register` | All | Registration page |
+| `/teacher` | Teacher | Exam creation, material upload, analytics |
+| `/student` | Student | Exam list, answer submission, results |
+| `/admin` | Admin | Manual review queue, system oversight |
