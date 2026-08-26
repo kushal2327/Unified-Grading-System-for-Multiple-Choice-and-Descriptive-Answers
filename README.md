@@ -1,10 +1,9 @@
-# Unified Grading System for Multiple Choice and Descriptive Answers
+# Descriptive Answer Grading System
 
-An AI-powered grading platform that combines automatic multiple-choice evaluation with intelligent descriptive answer grading using OCR, RAG, and LLMs.
+An AI-powered grading platform for descriptive answers using OCR, RAG, and LLMs.
 
 ## Features
 
-- **Multiple-choice grading** — instant, rule-based scoring
 - **Descriptive answer grading** — handwriting/answer-sheet OCR via Tesseract + optional vision LLM, followed by RAG-augmented LLM evaluation against teacher-provided materials
 - **Off-topic detection** — automatically zeros answers that don't address the question
 - **Automatic flagging** — submissions with low OCR confidence, low similarity, or invalid LLM responses are queued for manual review
