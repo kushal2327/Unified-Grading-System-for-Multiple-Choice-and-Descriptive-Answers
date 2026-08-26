@@ -36,10 +36,25 @@ _STOP_WORDS = frozenset({
 })
 
 
+def _simple_stem(word: str) -> str:
+    """Strip common English suffixes for better keyword matching."""
+    # Order matters: try longest suffixes first
+    for suffix in ("ization", "isation", "fulness", "ousness", "iveness",
+                    "ation", "tion", "ment", "ness", "ize", "ise", "ify",
+                    "ous", "ive", "ing", "ity", "ful", "est", "ally",
+                    "ent", "ant", "ism", "ist", "ize", "ise",
+                    "ly", "er", "ed", "al", "s"):
+        if word.endswith(suffix) and len(word) - len(suffix) >= 3:
+            return word[:-len(suffix)]
+    return word
+
+
 def _get_content_words(text: str) -> set:
-    """Extract lowercase content words from text, excluding stop words."""
+    """Extract lowercase content words from text, excluding stop words.
+    Applies simple suffix stripping so that word-form variations
+    (e.g. 'organize' / 'organization') still match."""
     words = re.findall(r"[a-z0-9]+", text.lower())
-    return {w for w in words if w not in _STOP_WORDS and len(w) > 1}
+    return {_simple_stem(w) for w in words if w not in _STOP_WORDS and len(w) > 1}
 
 
 def _deduplicate_chunks(chunks):
@@ -79,19 +94,20 @@ def compute_answer_relevance(question_text: str, answer_text: str) -> float:
     """
     Hybrid relevance score between the question and the student's answer.
 
-    Uses three complementary signals:
+    Uses two complementary signals:
       1. Embedding cosine similarity — catches deep semantic relevance
          (e.g. answer uses different words but describes the same concept).
       2. Keyword overlap — catches surface-level relevance when the answer
          shares content words with the question even if embeddings are weak
          (short answers, different sentence structures, etc.).
-      3. Question containment — detects when the answer contains most of the
-         question text (e.g. student copied the question). This prevents
-         false positives from OCR errors on identical text.
 
-    Returns the *maximum* of the three signals so that a relevant answer
+    Returns the *maximum* of the two signals so that a relevant answer
     passes as long as it is strong on at least one axis.  Truly off-topic
-    answers score low on all and get flagged.
+    answers score low on both and get flagged.
+
+    An additional guard ensures that if the answer shares a meaningful
+    fraction of the question's content words, the score is at least 0.5
+    to avoid false positives from embedding drift on short questions.
     """
     # --- Signal 1: embedding cosine similarity ---
     question_vector = embed_text(question_text)
@@ -104,21 +120,21 @@ def compute_answer_relevance(question_text: str, answer_text: str) -> float:
     q_overlap = 0.0
 
     if q_words:
-        # Fraction of question content words that appear in the answer
         q_overlap = len(q_words & a_words) / len(q_words)
-        # Jaccard index (symmetric)
         union = q_words | a_words
         jaccard = len(q_words & a_words) / len(union) if union else 0.0
         keyword_sim = max(q_overlap, jaccard)
     else:
         keyword_sim = 0.0
 
-    # --- Signal 3: question containment ---
-    # If the answer contains most of the question's content words,
-    # it's definitely on-topic (student may have copied the question).
-    containment_sim = q_overlap
+    # Guard: if the answer shares any content word from the question OR
+    # has moderate embedding similarity (semantic relevance), guarantee a
+    # relevance floor of 0.5 so topic-relevant answers aren't killed by
+    # embedding drift or paraphrasing with no literal keyword overlap.
+    if q_words and (q_overlap > 0 or embedding_sim >= 0.25):
+        keyword_sim = max(keyword_sim, 0.5)
 
-    return max(embedding_sim, keyword_sim, containment_sim)
+    return max(embedding_sim, keyword_sim)
 
 
 def retrieve_context(question_text: str, subject: str) -> dict:
